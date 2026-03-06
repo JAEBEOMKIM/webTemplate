@@ -53,13 +53,36 @@ function mdToHtml(md: string): string {
     return `<ol style="list-style:decimal;padding-left:20px;margin:8px 0">${items}</ol>`
   })
 
+  // GFM Tables
+  html = html.replace(/((?:^\|.+\|\n?)+)/gm, (match) => {
+    const lines = match.trim().split('\n').filter(l => l.trim())
+    if (lines.length < 2) return match
+    // Second line must be separator (|---|---|)
+    if (!/^\|[\s\-|:]+\|$/.test(lines[1].trim())) return match
+    const parseRow = (line: string) =>
+      line.replace(/^\||\|$/g, '').split('|').map(c => c.trim())
+    const headers = parseRow(lines[0])
+    const rows = lines.slice(2).map(parseRow)
+    const thCells = headers.map(h =>
+      `<th style="padding:7px 12px;text-align:left;font-weight:600;font-size:13px;color:var(--text-primary);border-bottom:2px solid var(--border);white-space:nowrap">${h}</th>`
+    ).join('')
+    const trRows = rows.map((cells, ri) => {
+      const tds = cells.map(c =>
+        `<td style="padding:6px 12px;font-size:13px;color:var(--text-secondary);border-bottom:1px solid var(--border)">${c}</td>`
+      ).join('')
+      const bg = ri % 2 === 1 ? 'background:var(--bg-secondary)' : ''
+      return `<tr style="${bg}">${tds}</tr>`
+    }).join('')
+    return `<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:12px 0"><thead><tr style="background:var(--bg-secondary)">${thCells}</tr></thead><tbody>${trRows}</tbody></table>`
+  })
+
   // Paragraphs: wrap double-newline separated blocks
   html = html
     .split(/\n{2,}/)
     .map(block => {
       const trimmed = block.trim()
       if (!trimmed) return ''
-      if (/^<(h[1-6]|ul|ol|pre|hr|blockquote)/.test(trimmed)) return trimmed
+      if (/^<(h[1-6]|ul|ol|pre|hr|blockquote|table)/.test(trimmed)) return trimmed
       return `<p style="margin:0 0 10px;line-height:1.7;color:var(--text-primary)">${trimmed.replace(/\n/g, '<br/>')}</p>`
     })
     .join('\n')
@@ -129,7 +152,7 @@ export function MarkdownConfigForm({ config, onChange }: ConfigFormProps) {
       )}
 
       <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-        # 제목 &nbsp;·&nbsp; **굵게** &nbsp;·&nbsp; *기울임* &nbsp;·&nbsp; ~~취소선~~ &nbsp;·&nbsp; `코드` &nbsp;·&nbsp; - 목록 &nbsp;·&nbsp; &gt; 인용 &nbsp;·&nbsp; [링크](url)
+        # 제목 &nbsp;·&nbsp; **굵게** &nbsp;·&nbsp; *기울임* &nbsp;·&nbsp; ~~취소선~~ &nbsp;·&nbsp; `코드` &nbsp;·&nbsp; - 목록 &nbsp;·&nbsp; &gt; 인용 &nbsp;·&nbsp; [링크](url) &nbsp;·&nbsp; | 표 |
       </p>
     </div>
   )
