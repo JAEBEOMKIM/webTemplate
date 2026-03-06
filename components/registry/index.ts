@@ -124,6 +124,7 @@ export const componentRegistry = new Map<string, ComponentDefinition>([
         height: 400,
         use_current_location: false,
         destination_link: '',
+        map_title: '',
       },
       Component: KakaoMapComponent,
       ConfigForm: KakaoMapConfigForm,

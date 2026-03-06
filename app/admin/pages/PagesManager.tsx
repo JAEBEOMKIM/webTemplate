@@ -1,0 +1,211 @@
+'use client'
+
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+
+export interface PageRow {
+  id: string
+  slug: string
+  title: string
+  access_type: string
+  is_published: boolean
+  created_at: string
+}
+
+const accessConfig: Record<string, { label: string; color: string }> = {
+  public:   { label: '공개',      color: 'var(--success)' },
+  password: { label: '비밀번호',  color: 'var(--warning)' },
+  oauth:    { label: 'OAuth',     color: 'var(--accent-text)' },
+}
+
+function extractStoragePath(url: string): string | null {
+  const marker = '/storage/v1/object/public/gallery-images/'
+  const idx = url.indexOf(marker)
+  if (idx === -1) return null
+  return decodeURIComponent(url.slice(idx + marker.length))
+}
+
+export default function PagesManager({ initialPages }: { initialPages: PageRow[] }) {
+  const [pages, setPages]         = useState<PageRow[]>(initialPages)
+  const [toggling, setToggling]   = useState<Set<string>>(new Set())
+  const [confirmPage, setConfirmPage] = useState<PageRow | null>(null)
+  const [deleting, setDeleting]   = useState(false)
+
+  // ── 발행/정지 토글 ─────────────────────────────────────────────────────────
+  const handleTogglePublish = async (page: PageRow) => {
+    if (toggling.has(page.id)) return
+    setToggling(prev => new Set(prev).add(page.id))
+    const next = !page.is_published
+    setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_published: next } : p))
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('pages')
+      .update({ is_published: next })
+      .eq('id', page.id)
+    if (error) {
+      setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_published: !next } : p))
+    }
+    setToggling(prev => { const s = new Set(prev); s.delete(page.id); return s })
+  }
+
+  // ── 페이지 삭제 확정 ────────────────────────────────────────────────────────
+  const handleConfirmDelete = async () => {
+    if (!confirmPage) return
+    setDeleting(true)
+    const supabase = createClient()
+    const page = confirmPage
+
+    // 1) image-gallery 컴포넌트 config에서 스토리지 파일 경로 수집
+    const { data: comps } = await supabase
+      .from('page_components')
+      .select('config')
+      .eq('page_id', page.id)
+      .eq('component_type', 'image-gallery')
+
+    const storagePaths: string[] = []
+    for (const comp of comps ?? []) {
+      const imgs = ((comp.config as Record<string, unknown>)?.images as { url: string }[]) ?? []
+      for (const img of imgs) {
+        const p = extractStoragePath(img.url)
+        if (p) storagePaths.push(p)
+      }
+    }
+
+    // 2) 스토리지 파일 삭제
+    if (storagePaths.length > 0) {
+      await supabase.storage.from('gallery-images').remove(storagePaths)
+    }
+
+    // 3) 페이지 삭제 (DB CASCADE → 모든 관련 데이터 자동 삭제)
+    await supabase.from('pages').delete().eq('id', page.id)
+
+    setPages(prev => prev.filter(p => p.id !== page.id))
+    setDeleting(false)
+    setConfirmPage(null)
+  }
+
+  const confirmTarget = confirmPage
+
+  if (pages.length === 0) {
+    return (
+      <div className="card" style={{ padding: '60px 20px', textAlign: 'center' }}>
+        <div style={{ width: '52px', height: '52px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '22px' }}>📄</div>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>페이지가 없습니다</p>
+        <Link href="/admin/pages/new">
+          <button className="btn-primary">첫 번째 페이지 만들기</button>
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <>
+    <ConfirmDialog
+      open={!!confirmTarget}
+      title="페이지 삭제"
+      message={`"${confirmTarget?.title}" 페이지를 정말 삭제하시겠습니까?\n\n관련 컴포넌트, 게시글, 이미지, 설문 데이터가 모두 함께 삭제되며 복구할 수 없습니다.`}
+      confirmLabel="삭제"
+      danger
+      loading={deleting}
+      onConfirm={handleConfirmDelete}
+      onCancel={() => { if (!deleting) setConfirmPage(null) }}
+    />
+
+    <div className="card" style={{ overflow: 'hidden' }}>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+
+        {/* Header */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 130px 100px 120px 1fr',
+          borderBottom: '1px solid var(--border)',
+          padding: '10px 20px',
+          minWidth: '680px',
+        }}>
+          {['제목', 'URL', '권한', '상태', '관리'].map(h => (
+            <div key={h} style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
+          ))}
+        </div>
+
+        {/* Rows */}
+        {pages.map(page => {
+          const ac = accessConfig[page.access_type] || { label: page.access_type, color: 'var(--text-muted)' }
+          const isToggling = toggling.has(page.id)
+
+          return (
+            <div
+              key={page.id}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 130px 100px 120px 1fr',
+                padding: '12px 20px',
+                borderBottom: '1px solid var(--border-subtle)',
+                minWidth: '680px',
+                alignItems: 'center',
+              }}
+            >
+              {/* 제목 */}
+              <div style={{ fontWeight: 500, fontSize: '14px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '12px' }}>
+                {page.title}
+              </div>
+
+              {/* URL */}
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                /{page.slug}
+              </div>
+
+              {/* 권한 */}
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 500, color: ac.color, background: `${ac.color}18`, padding: '2px 8px', borderRadius: '20px' }}>
+                  {ac.label}
+                </span>
+              </div>
+
+              {/* 상태 + 발행/정지 토글 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {page.is_published
+                  ? <span className="badge-success">발행됨</span>
+                  : <span className="badge-draft">초안</span>
+                }
+                <button
+                  onClick={() => handleTogglePublish(page)}
+                  disabled={isToggling}
+                  className={page.is_published ? 'btn-secondary' : 'btn-primary'}
+                  style={{ padding: '3px 8px', fontSize: '11px', opacity: isToggling ? 0.6 : 1 }}
+                >
+                  {isToggling ? '...' : page.is_published ? '정지' : '발행'}
+                </button>
+              </div>
+
+              {/* 관리 */}
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Link href={`/admin/pages/${page.id}/edit`}>
+                  <button className="btn-ghost" style={{ padding: '5px 10px', fontSize: '12px' }}>편집</button>
+                </Link>
+                <Link href={`/admin/pages/${page.id}/invites`}>
+                  <button className="btn-ghost" style={{ padding: '5px 10px', fontSize: '12px', color: 'var(--accent-text)' }}>초대코드</button>
+                </Link>
+                <Link href={`/${page.slug}`} target="_blank">
+                  <button className="btn-ghost" style={{ padding: '5px 8px' }}>
+                    <svg width="12" height="12" viewBox="0 0 15 15" fill="none">
+                      <path d="M3 2C2.44772 2 2 2.44772 2 3V12C2 12.5523 2.44772 13 3 13H12C12.5523 13 13 12.5523 13 12V8.5C13 8.22386 12.7761 8 12.5 8C12.2239 8 12 8.22386 12 8.5V12H3V3L6.5 3C6.77614 3 7 2.77614 7 2.5C7 2.22386 6.77614 2 6.5 2H3ZM12.8536 2.14645C12.9015 2.19439 12.9377 2.24964 12.9621 2.30861C12.9861 2.36669 12.9996 2.4303 13 2.497L13 2.5V2.50049V5.5C13 5.77614 12.7761 6 12.5 6C12.2239 6 12 5.77614 12 5.5V3.70711L6.85355 8.85355C6.65829 9.04882 6.34171 9.04882 6.14645 8.85355C5.95118 8.65829 5.95118 8.34171 6.14645 8.14645L11.2929 3H9.5C9.22386 3 9 2.77614 9 2.5C9 2.22386 9.22386 2 9.5 2H12.4999H12.5C12.5678 2 12.6324 2.01349 12.6914 2.03794C12.7504 2.06234 12.8058 2.09851 12.8536 2.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
+                    </svg>
+                  </button>
+                </Link>
+
+                <button
+                  onClick={() => setConfirmPage(page)}
+                  className="btn-danger"
+                  style={{ padding: '5px 8px', fontSize: '12px', opacity: 0.7 }}
+                >삭제</button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+    </>
+  )
+}

@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DynamicPage } from './DynamicPage'
+import { PageViewTracker } from '@/components/PageViewTracker'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -28,12 +29,14 @@ export default async function SlugPage({ params }: Props) {
     .order('display_order')
 
   // 접근 권한 체크
+  const tracker = <PageViewTracker pageId={page.id} />
+
   if (page.access_type === 'public') {
-    return <DynamicPage page={page} components={components || []} />
+    return <>{tracker}<DynamicPage page={page} components={components || []} /></>
   }
 
   if (page.access_type === 'password') {
-    return <DynamicPage page={page} components={components || []} requiresPassword />
+    return <>{tracker}<DynamicPage page={page} components={components || []} requiresPassword /></>
   }
 
   if (page.access_type === 'oauth') {
@@ -52,10 +55,10 @@ export default async function SlugPage({ params }: Props) {
       .single()
 
     if (!grant) {
-      return <DynamicPage page={page} components={components || []} requiresInviteCode user={user} />
+      return <>{tracker}<DynamicPage page={page} components={components || []} requiresInviteCode user={user} /></>
     }
 
-    return <DynamicPage page={page} components={components || []} />
+    return <>{tracker}<DynamicPage page={page} components={components || []} /></>
   }
 
   notFound()

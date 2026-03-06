@@ -176,13 +176,16 @@ export function KakaoMapComponent({ config }: ComponentProps) {
   const mapHeight         = (config.height             as number)  ?? 400
   const useCurrentLoc     = (config.use_current_location as boolean) === true
   const destinationLink   = (config.destination_link   as string)  || ''
+  const mapTitle          = (config.map_title          as string)  || ''
 
-  const containerRef  = useRef<HTMLDivElement>(null)
-  const mapRef        = useRef<KakaoMap | null>(null)
-  const markersRef    = useRef<KakaoMarker[]>([])
-  const overlaysRef   = useRef<KakaoCustomOverlay[]>([])
-  const polylineRef   = useRef<KakaoPolyline | null>(null)
-  const infoRef       = useRef<KakaoInfoWindow | null>(null)
+  const containerRef       = useRef<HTMLDivElement>(null)
+  const mapRef             = useRef<KakaoMap | null>(null)
+  const markersRef         = useRef<KakaoMarker[]>([])
+  const overlaysRef        = useRef<KakaoCustomOverlay[]>([])
+  const polylineRef        = useRef<KakaoPolyline | null>(null)
+  const infoRef            = useRef<KakaoInfoWindow | null>(null)
+  // 마지막으로 중심을 맞춘 목적지 좌표 — 같은 위치면 setCenter 생략
+  const centeredDestRef    = useRef<string>('')
 
   const [locError, setLocError] = useState('')
   const [locLoading, setLocLoading] = useState(false)
@@ -215,13 +218,17 @@ export function KakaoMapComponent({ config }: ComponentProps) {
     if (!ready || !containerRef.current) return
     const K = window.kakao!.maps
 
-    const center = dest
-      ? new K.LatLng(dest.lat, dest.lng)
-      : new K.LatLng(centerLat, centerLng)
+    // 목적지가 있으면 목적지를 초기 중심으로 고정, 없으면 설정된 기본 좌표 사용
+    const initLat = dest?.lat ?? centerLat
+    const initLng = dest?.lng ?? centerLng
+    const center = new K.LatLng(initLat, initLng)
 
     const map = new K.Map(containerRef.current, { center, level: zoom })
     mapRef.current = map
     map.setMapTypeId(K.MapTypeId[mapType] ?? K.MapTypeId.ROADMAP)
+
+    // 초기 중심 좌표 기록 — markers effect에서 중복 setCenter 방지
+    centeredDestRef.current = `${initLat},${initLng}`
 
     if (showCtrl) {
       map.addControl(new K.ZoomControl(), K.ControlPosition.RIGHT)
@@ -235,6 +242,7 @@ export function KakaoMapComponent({ config }: ComponentProps) {
       markersRef.current = []
       overlaysRef.current = []
       polylineRef.current = null
+      centeredDestRef.current = ''
       mapRef.current = null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -267,9 +275,13 @@ export function KakaoMapComponent({ config }: ComponentProps) {
 
     if (!useCurrentLoc) {
       // ── Destination-only mode ──
-      // Center on destination
-      map.setCenter(destPos)
-      map.setLevel(zoom)
+      // 목적지가 바뀌었을 때만 지도 중심 이동 (초기 init에서 이미 설정된 경우 생략)
+      const destKey = `${dest.lat},${dest.lng}`
+      if (centeredDestRef.current !== destKey) {
+        map.setCenter(destPos)
+        map.setLevel(zoom)
+        centeredDestRef.current = destKey
+      }
 
       // Standard marker
       const marker = new K.Marker({ position: destPos, map })
@@ -385,7 +397,15 @@ export function KakaoMapComponent({ config }: ComponentProps) {
     : ''
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: `${mapHeight}px` }}>
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Optional title */}
+      {mapTitle && (
+        <div style={{ padding: '12px 14px 8px', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+          {mapTitle}
+        </div>
+      )}
+
+      <div style={{ position: 'relative', width: '100%', height: `${mapHeight}px`, flex: '0 0 auto' }}>
       {/* Loading overlay */}
       {!ready && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', zIndex: 10 }}>
@@ -431,6 +451,7 @@ export function KakaoMapComponent({ config }: ComponentProps) {
       )}
 
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      </div>
     </div>
   )
 }
@@ -449,6 +470,7 @@ export function KakaoMapConfigForm({ config, onChange }: ConfigFormProps) {
   const mapHeight       = (config.height             as number)  ?? 400
   const useCurrentLoc   = (config.use_current_location as boolean) === true
   const destinationLink = (config.destination_link   as string)  || ''
+  const mapTitle        = (config.map_title          as string)  || ''
 
   const [addrInput, setAddrInput] = useState('')
   const [addrSearching, setAddrSearching] = useState(false)
@@ -536,6 +558,18 @@ export function KakaoMapConfigForm({ config, onChange }: ConfigFormProps) {
           developers.kakao.com → 내 애플리케이션 → 앱 키 → JavaScript 키<br />
           <strong>플랫폼</strong>에서 사이트 도메인 등록 필수
         </p>
+      </div>
+
+      {/* Map title */}
+      <div>
+        <label style={labelStyle}>지도 제목 (선택)</label>
+        <input
+          className="input"
+          value={mapTitle}
+          onChange={e => onChange({ ...config, map_title: e.target.value })}
+          placeholder="예: 오시는 길, 행사 장소"
+          style={{ fontSize: '13px' }}
+        />
       </div>
 
       {/* Route mode toggle */}
