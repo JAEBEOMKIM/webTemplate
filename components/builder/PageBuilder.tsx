@@ -399,6 +399,21 @@ export function PageBuilder({ page, initialComponents }: Props) {
                 onSave={saveLayout}
               />
               <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+              {/* 공통 옵션 */}
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>공통 옵션</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    id="common-show-border"
+                    checked={(selectedComponent.config.show_border as boolean) !== false}
+                    onChange={e => handleConfigChange(selectedComponent.id, { ...selectedComponent.config, show_border: e.target.checked })}
+                    style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
+                  />
+                  <label htmlFor="common-show-border" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>테두리 표시</label>
+                </div>
+              </div>
+              <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
               <selectedDef.ConfigForm
                 config={selectedComponent.config}
                 onChange={config => handleConfigChange(selectedComponent.id, config)}

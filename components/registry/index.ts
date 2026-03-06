@@ -2,6 +2,10 @@ import { BoardComponent, BoardConfigForm } from './board/BoardComponent'
 import { CalendarComponent, CalendarConfigForm } from './calendar/CalendarComponent'
 import { SurveyComponent, SurveyConfigForm } from './survey/SurveyComponent'
 import { ImageGalleryComponent, ImageGalleryConfigForm } from './image-gallery/ImageGalleryComponent'
+import { HtmlComponent, HtmlConfigForm } from './html/HtmlComponent'
+import { MarkdownComponent, MarkdownConfigForm } from './markdown/MarkdownComponent'
+import { ShareComponent, ShareConfigForm } from './share/ShareComponent'
+import { TimetableComponent, TimetableConfigForm } from './timetable/TimetableComponent'
 import type { ComponentDefinition } from './types'
 
 export const componentRegistry = new Map<string, ComponentDefinition>([
@@ -51,6 +55,54 @@ export const componentRegistry = new Map<string, ComponentDefinition>([
       defaultConfig: { title: '갤러리', images: [], autoplay: true, interval: 3000 },
       Component: ImageGalleryComponent,
       ConfigForm: ImageGalleryConfigForm,
+    },
+  ],
+  [
+    'html',
+    {
+      id: 'html',
+      name: 'HTML',
+      description: '직접 작성한 HTML을 그대로 표시',
+      icon: '🖥️',
+      defaultConfig: { html: '' },
+      Component: HtmlComponent,
+      ConfigForm: HtmlConfigForm,
+    },
+  ],
+  [
+    'markdown',
+    {
+      id: 'markdown',
+      name: '마크다운',
+      description: '마크다운 형식으로 텍스트 콘텐츠 작성',
+      icon: '📝',
+      defaultConfig: { content: '' },
+      Component: MarkdownComponent,
+      ConfigForm: MarkdownConfigForm,
+    },
+  ],
+  [
+    'share',
+    {
+      id: 'share',
+      name: '공유하기',
+      description: '카카오톡, 문자, 링크 복사 공유 버튼',
+      icon: '🔗',
+      defaultConfig: { title: '공유하기', description: '', show_kakao: true, show_sms: true, show_copy: true, kakao_app_key: '' },
+      Component: ShareComponent,
+      ConfigForm: ShareConfigForm,
+    },
+  ],
+  [
+    'timetable',
+    {
+      id: 'timetable',
+      name: '하루 일정표',
+      description: '시간별 하루 일정을 시각적으로 표시',
+      icon: '🗓️',
+      defaultConfig: { title: '하루 일정', events: [], start_hour: 8, end_hour: 22 },
+      Component: TimetableComponent,
+      ConfigForm: TimetableConfigForm,
     },
   ],
 ])

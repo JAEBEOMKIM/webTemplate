@@ -28,7 +28,8 @@ export default async function AdminPagesPage() {
 
       {pages && pages.length > 0 ? (
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px 80px 160px', borderBottom: '1px solid var(--border)', padding: '10px 20px' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px 80px 160px', borderBottom: '1px solid var(--border)', padding: '10px 20px', minWidth: '560px' }}>
             {['제목', 'URL', '권한', '상태', '관리'].map(h => (
               <div key={h} style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
             ))}
@@ -37,7 +38,7 @@ export default async function AdminPagesPage() {
           {pages.map(page => {
             const ac = accessConfig[page.access_type] || { label: page.access_type, color: 'var(--text-muted)' }
             return (
-              <div key={page.id} className="table-row-hover" style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px 80px 160px', padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <div key={page.id} className="table-row-hover" style={{ display: 'grid', gridTemplateColumns: '1fr 120px 100px 80px 160px', padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', minWidth: '560px' }}>
                 <div style={{ fontWeight: 500, fontSize: '14px', color: 'var(--text-primary)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.title}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace', alignSelf: 'center' }}>/{page.slug}</div>
                 <div style={{ alignSelf: 'center' }}>
@@ -67,6 +68,7 @@ export default async function AdminPagesPage() {
               </div>
             )
           })}
+          </div>
         </div>
       ) : (
         <div className="card" style={{ padding: '60px 20px', textAlign: 'center' }}>

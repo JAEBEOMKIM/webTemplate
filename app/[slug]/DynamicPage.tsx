@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { componentRegistry } from '@/components/registry'
 import type { PageData, PageComponentData } from '@/components/registry/types'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -173,16 +173,18 @@ function PageContent({ page, components }: { page: PageData; components: PageCom
               const y = comp.grid_y ?? 0
               const w = comp.grid_w ?? GRID_COLS
               const h = comp.grid_h ?? 6
+              const showBorder = (comp.config.show_border as boolean) !== false
               return (
                 <div
                   key={comp.id}
-                  className="card"
+                  className={showBorder ? 'card' : undefined}
                   style={{
                     gridColumn: `${x + 1} / span ${w}`,
                     gridRow: `${y + 1} / span ${h}`,
                     overflow: 'auto',
                     minWidth: 0,
                     minHeight: 0,
+                    ...(showBorder ? {} : { background: 'transparent' }),
                   }}
                 >
                   <def.Component
@@ -201,12 +203,13 @@ function PageContent({ page, components }: { page: PageData; components: PageCom
 }
 
 export function DynamicPage({ page, components, requiresPassword, requiresInviteCode, user }: Props) {
-  const [unlocked, setUnlocked] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`page-access-${page.id}`) === '1'
+  const [unlocked, setUnlocked] = useState(false)
+
+  useEffect(() => {
+    if (sessionStorage.getItem(`page-access-${page.id}`) === '1') {
+      setUnlocked(true)
     }
-    return false
-  })
+  }, [page.id])
 
   if (requiresPassword && !unlocked) return <PasswordGate page={page} onUnlock={() => setUnlocked(true)} />
   if (requiresInviteCode && !unlocked && user) return <InviteCodeGate page={page} user={user} onUnlock={() => setUnlocked(true)} />
