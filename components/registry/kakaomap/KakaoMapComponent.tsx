@@ -16,7 +16,7 @@ interface KakaoNamespace {
     LatLng: new (lat: number, lng: number) => KakaoLatLng
     Map: new (el: HTMLElement, opts: { center: KakaoLatLng; level: number }) => KakaoMap
     Marker: new (opts: { position: KakaoLatLng; map?: KakaoMap; title?: string }) => KakaoMarker
-    InfoWindow: new (opts: { content: string; removable?: boolean }) => KakaoInfoWindow
+    InfoWindow: new (opts: { content?: string; removable?: boolean }) => KakaoInfoWindow
     MapTypeId: { ROADMAP: unknown; SKYVIEW: unknown; HYBRID: unknown }
     ZoomControl: new () => unknown
     MapTypeControl: new () => unknown
