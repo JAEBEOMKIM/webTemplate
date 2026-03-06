@@ -85,15 +85,26 @@ export function TimetableComponent({ config }: ComponentProps) {
     )
   }
 
+  // 마지막으로 렌더되는 섹션이 어느 것인지 판단
+  const legendVisible = showLegend && visible.length > 0
+  const timelineIsLast = showTimeline && !legendVisible
+
   return (
-    <div style={{ padding: '12px 12px 12px 0' }}>
-      <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px', paddingLeft: '8px' }}>
+    <div style={{ padding: '12px 12px 0 0' }}>
+      <h2 style={{
+        fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)',
+        paddingLeft: '8px',
+        marginBottom: (showTimeline || legendVisible) ? '10px' : '0',
+      }}>
         {title}
       </h2>
 
       {/* ── Timeline ── */}
       {showTimeline && (
-        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+        <div style={{
+          display: 'flex', alignItems: 'flex-start',
+          paddingBottom: timelineIsLast ? '12px' : '0',
+        }}>
           {/* Time axis */}
           <div style={{ width: '36px', flexShrink: 0, position: 'relative', height: `${totalHeight}px` }}>
             {hours.map(h => (
@@ -174,12 +185,13 @@ export function TimetableComponent({ config }: ComponentProps) {
       )}
 
       {/* ── Legend ── */}
-      {showLegend && visible.length > 0 && (
+      {legendVisible && (
         <div style={{
-          marginTop: showTimeline ? '12px' : '4px',
-          paddingTop: showTimeline ? '10px' : '0',
-          borderTop: showTimeline ? '1px solid var(--border-subtle)' : 'none',
-          paddingLeft: '8px',
+          marginTop:    showTimeline ? '12px' : '0',
+          paddingTop:   showTimeline ? '10px' : '0',
+          borderTop:    showTimeline ? '1px solid var(--border-subtle)' : 'none',
+          paddingLeft:  '8px',
+          paddingBottom: '12px',
           display: 'flex', flexDirection: 'column', gap: '5px',
         }}>
           {visible.map(ev => (
