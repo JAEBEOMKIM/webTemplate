@@ -41,10 +41,12 @@ function formatKo(t: string): string {
 // Display component
 // ──────────────────────────────────────────────
 export function TimetableComponent({ config }: ComponentProps) {
-  const title     = (config.title as string) || '하루 일정'
-  const events    = (config.events as TimetableEvent[]) || []
-  const startHour = typeof config.start_hour === 'number' ? config.start_hour : 8
-  const endHour   = typeof config.end_hour   === 'number' ? config.end_hour   : 22
+  const title       = (config.title as string) || '하루 일정'
+  const events      = (config.events as TimetableEvent[]) || []
+  const startHour   = typeof config.start_hour === 'number' ? config.start_hour : 8
+  const endHour     = typeof config.end_hour   === 'number' ? config.end_hour   : 22
+  const showTimeline = (config.show_timeline as boolean) !== false
+  const showLegend   = (config.show_legend   as boolean) !== false
 
   const rangeStart  = startHour * 60
   const rangeEnd    = endHour   * 60
@@ -84,105 +86,100 @@ export function TimetableComponent({ config }: ComponentProps) {
   }
 
   return (
-    <div style={{ padding: '16px' }}>
-      <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
+    <div style={{ padding: '12px 12px 12px 0' }}>
+      <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px', paddingLeft: '8px' }}>
         {title}
       </h2>
 
-      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-        {/* ── Time axis ── */}
-        <div
-          style={{
-            width: '44px',
-            flexShrink: 0,
-            position: 'relative',
-            height: `${totalHeight}px`,
-          }}
-        >
-          {hours.map(h => (
-            <div
-              key={h}
-              style={{
-                position: 'absolute',
-                top:    `${(h - startHour) * HOUR_PX}px`,
-                right:  '4px',
-                fontSize:  '10px',
-                lineHeight: 1,
-                color: 'var(--text-muted)',
-                transform: 'translateY(-50%)',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {pad(h)}
-            </div>
-          ))}
-        </div>
-
-        {/* ── Events grid ── */}
-        <div
-          style={{
-            flex: 1,
-            // CSS Grid: one explicit row per 15-minute slot
-            display: 'grid',
-            gridTemplateColumns: '1fr',
-            gridTemplateRows: `repeat(${totalSlots}, ${SLOT_PX}px)`,
-            // Hour lines via background repeating gradient
-            backgroundImage: `repeating-linear-gradient(
-              to bottom,
-              var(--border) 0px, var(--border) 1px,
-              transparent 1px, transparent ${HOUR_PX}px
-            )`,
-          }}
-        >
-          {visible.map(ev => (
-            <div
-              key={ev.id}
-              style={{
-                gridColumn: 1,
-                gridRow: `${ev.startSlot} / ${ev.endSlot}`,
-                background:   `${ev.color}22`,
-                borderLeft:   `3px solid ${ev.color}`,
-                borderRadius: '0 5px 5px 0',
-                margin:       '1px 3px 1px 2px',
-                padding:      '2px 6px',
-                overflow:     'hidden',
-                minHeight:    0,
-                // Let the event fill its grid rows
-                alignSelf:    'stretch',
-                justifySelf:  'stretch',
-              }}
-            >
-              <div style={{
-                fontSize: '11px', fontWeight: 700,
-                color: ev.color || 'var(--accent-text)',
-                lineHeight: 1.3,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {ev.title || '(제목 없음)'}
+      {/* ── Timeline ── */}
+      {showTimeline && (
+        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+          {/* Time axis */}
+          <div style={{ width: '36px', flexShrink: 0, position: 'relative', height: `${totalHeight}px` }}>
+            {hours.map(h => (
+              <div
+                key={h}
+                style={{
+                  position: 'absolute',
+                  top:        `${(h - startHour) * HOUR_PX}px`,
+                  right:      '4px',
+                  fontSize:   '10px',
+                  lineHeight: 1,
+                  color:      'var(--text-muted)',
+                  transform:  'translateY(-50%)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {pad(h)}
               </div>
-              {ev.durationMin >= 20 && (
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px' }}>
-                  {ev.start_time} – {ev.end_time}
-                </div>
-              )}
-              {ev.durationMin >= 45 && ev.description && (
+            ))}
+          </div>
+
+          {/* Events grid */}
+          <div
+            style={{
+              flex: 1,
+              display: 'grid',
+              gridTemplateColumns: '1fr',
+              gridTemplateRows: `repeat(${totalSlots}, ${SLOT_PX}px)`,
+              backgroundImage: `repeating-linear-gradient(
+                to bottom,
+                var(--border) 0px, var(--border) 1px,
+                transparent 1px, transparent ${HOUR_PX}px
+              )`,
+            }}
+          >
+            {visible.map(ev => (
+              <div
+                key={ev.id}
+                style={{
+                  gridColumn:   1,
+                  gridRow:      `${ev.startSlot} / ${ev.endSlot}`,
+                  background:   `${ev.color}22`,
+                  borderLeft:   `3px solid ${ev.color}`,
+                  borderRadius: '0 5px 5px 0',
+                  margin:       '1px 3px 1px 0',
+                  padding:      '2px 6px',
+                  overflow:     'hidden',
+                  minHeight:    0,
+                  alignSelf:    'stretch',
+                  justifySelf:  'stretch',
+                }}
+              >
                 <div style={{
-                  fontSize: '10px', color: 'var(--text-secondary)', marginTop: '1px',
+                  fontSize: '11px', fontWeight: 700,
+                  color: ev.color || 'var(--accent-text)',
+                  lineHeight: 1.3,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
-                  {ev.description}
+                  {ev.title || '(제목 없음)'}
                 </div>
-              )}
-            </div>
-          ))}
+                {ev.durationMin >= 20 && (
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                    {ev.start_time} – {ev.end_time}
+                  </div>
+                )}
+                {ev.durationMin >= 45 && ev.description && (
+                  <div style={{
+                    fontSize: '10px', color: 'var(--text-secondary)', marginTop: '1px',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {ev.description}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Legend ── */}
-      {visible.length > 0 && (
+      {showLegend && visible.length > 0 && (
         <div style={{
-          marginTop: '12px', paddingTop: '10px',
-          borderTop: '1px solid var(--border-subtle)',
+          marginTop: showTimeline ? '12px' : '4px',
+          paddingTop: showTimeline ? '10px' : '0',
+          borderTop: showTimeline ? '1px solid var(--border-subtle)' : 'none',
+          paddingLeft: '8px',
           display: 'flex', flexDirection: 'column', gap: '5px',
         }}>
           {visible.map(ev => (
@@ -256,6 +253,28 @@ export function TimetableConfigForm({ config, onChange }: ConfigFormProps) {
       <div>
         <label style={labelStyle}>제목</label>
         <input className="input" value={(config.title as string) || ''} onChange={e => onChange({ ...config, title: e.target.value })} style={{ fontSize: '13px' }} />
+      </div>
+
+      {/* 표시 옵션 */}
+      <div>
+        <label style={labelStyle}>표시 옵션</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+          {[
+            { key: 'show_timeline', label: '타임테이블 (시간 그리드)' },
+            { key: 'show_legend',   label: '일정 요약 목록' },
+          ].map(({ key, label }) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                id={`tt-${key}`}
+                checked={(config[key] as boolean) !== false}
+                onChange={e => onChange({ ...config, [key]: e.target.checked })}
+                style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
+              />
+              <label htmlFor={`tt-${key}`} style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>{label}</label>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '8px' }}>
