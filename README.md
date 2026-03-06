@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Web Component Page Builder
 
-## Getting Started
+모듈식 웹 컴포넌트를 조합해 페이지를 만드는 노코드 페이지 빌더 시스템.
 
-First, run the development server:
+## 기술 스택
+- **Next.js 16** (App Router) + TypeScript + Tailwind CSS
+- **Supabase** (PostgreSQL + Auth + Storage + RLS)
+- **OAuth2**: Google (Supabase 내장), Naver (서버사이드 직접 구현)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 시작하기
+
+### 1. Supabase 설정
+
+1. [supabase.com](https://supabase.com)에서 새 프로젝트 생성
+2. **SQL Editor**에서 `supabase/migrations/001_init.sql` 실행
+3. **Authentication > Providers**에서 Google OAuth 활성화:
+   - Google Cloud Console에서 OAuth 앱 생성
+   - Client ID/Secret을 Supabase에 입력
+   - Callback URL: `https://your-project.supabase.co/auth/v1/callback`
+
+### 2. 환경 변수 설정
+
+`.env.local` 파일 수정:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciO...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciO...
+
+ADMIN_EMAIL=your@email.com
+
+NAVER_CLIENT_ID=your_naver_client_id
+NAVER_CLIENT_SECRET=your_naver_client_secret
+NAVER_CALLBACK_URL=http://localhost:3000/api/auth/naver/callback
+
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. 네이버 OAuth 설정 (선택)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. [네이버 개발자 센터](https://developers.naver.com/apps/)에서 앱 등록
+2. 콜백 URL: `http://localhost:3000/api/auth/naver/callback`
+3. 사용 API: 네이버 로그인
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. 실행
 
-## Learn More
+```bash
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 사용법
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. `/auth/login`에서 Google로 로그인 (ADMIN_EMAIL 계정)
+2. `/admin`에서 페이지 생성 및 컴포넌트 조합
+3. 발행 후 `/{slug}`로 접근
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 접근 권한
 
-## Deploy on Vercel
+| 유형 | 설명 |
+|------|------|
+| 공개 | 누구나 접근 가능 |
+| 비밀번호 | 비밀번호 입력 후 접근 |
+| OAuth+초대코드 | 소셜 로그인 + 초대코드 필요 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 기본 컴포넌트
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 📋 **게시판** - 글 작성/댓글
+- 📅 **달력/스케줄** - 일정 등록
+- 📊 **설문조사** - 단일/다중선택, 텍스트, 별점
+- 🖼️ **이미지 갤러리** - 슬라이드쇼
+
+## 새 컴포넌트 추가
+
+1. `components/registry/[이름]/` 폴더에 컴포넌트 구현
+2. `components/registry/index.ts` 레지스트리에 등록
+3. DB `component_definitions` 테이블에 INSERT
