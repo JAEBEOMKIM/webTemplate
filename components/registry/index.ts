@@ -6,6 +6,7 @@ import { HtmlComponent, HtmlConfigForm } from './html/HtmlComponent'
 import { MarkdownComponent, MarkdownConfigForm } from './markdown/MarkdownComponent'
 import { ShareComponent, ShareConfigForm } from './share/ShareComponent'
 import { TimetableComponent, TimetableConfigForm } from './timetable/TimetableComponent'
+import { KakaoMapComponent, KakaoMapConfigForm } from './kakaomap/KakaoMapComponent'
 import type { ComponentDefinition } from './types'
 
 export const componentRegistry = new Map<string, ComponentDefinition>([
@@ -103,6 +104,27 @@ export const componentRegistry = new Map<string, ComponentDefinition>([
       defaultConfig: { title: '하루 일정', events: [], start_hour: 8, end_hour: 22 },
       Component: TimetableComponent,
       ConfigForm: TimetableConfigForm,
+    },
+  ],
+  [
+    'kakaomap',
+    {
+      id: 'kakaomap',
+      name: '카카오맵',
+      description: '카카오맵으로 위치와 마커를 표시',
+      icon: '🗺️',
+      defaultConfig: {
+        app_key: '',
+        center_lat: 37.5665,
+        center_lng: 126.9780,
+        zoom: 3,
+        map_type: 'ROADMAP',
+        markers: [],
+        show_controls: true,
+        height: 400,
+      },
+      Component: KakaoMapComponent,
+      ConfigForm: KakaoMapConfigForm,
     },
   ],
 ])

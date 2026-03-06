@@ -43,6 +43,14 @@ function useKakaoSdk(appKey: string) {
   return ready
 }
 
+function isMobileDevice() {
+  return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
+
+function supportsNativeShare() {
+  return typeof navigator !== 'undefined' && !!navigator.share
+}
+
 export function ShareComponent({ config }: ComponentProps) {
   const title = (config.title as string) || '공유하기'
   const description = (config.description as string) || ''
@@ -54,14 +62,14 @@ export function ShareComponent({ config }: ComponentProps) {
   const buttonLabel = (config.button_label as string) || '공유하기'
 
   const [copied, setCopied] = useState(false)
+  const [kakaoError, setKakaoError] = useState('')
   const kakaoReady = useKakaoSdk(showKakao ? kakaoAppKey : '')
 
   const getShareUrl = () => typeof window !== 'undefined' ? window.location.href : ''
 
-  const handleKakao = () => {
-    if (!window.Kakao?.Share) return
-    const shareUrl = getShareUrl()
-    window.Kakao.Share.sendDefault({
+  // Kakao SDK share (opens KakaoTalk app on mobile, popup on desktop)
+  const shareViaKakaoSdk = (shareUrl: string) => {
+    window.Kakao!.Share.sendDefault({
       objectType: 'feed',
       content: {
         title,
@@ -74,6 +82,43 @@ export function ShareComponent({ config }: ComponentProps) {
       ],
     })
   }
+
+  // Native Web Share API (shows OS share sheet — includes KakaoTalk on Android/iOS)
+  const shareViaNative = async (shareUrl: string) => {
+    try {
+      await navigator.share({ title, text: description, url: shareUrl })
+    } catch (e) {
+      // User cancelled or API unsupported — ignore
+      if ((e as DOMException)?.name !== 'AbortError') {
+        setKakaoError('공유에 실패했습니다.')
+        setTimeout(() => setKakaoError(''), 3000)
+      }
+    }
+  }
+
+  const handleKakao = async () => {
+    setKakaoError('')
+    const shareUrl = getShareUrl()
+
+    // 1) Kakao SDK ready → use it (naturally opens KakaoTalk app on mobile)
+    if (kakaoReady && window.Kakao?.Share) {
+      shareViaKakaoSdk(shareUrl)
+      return
+    }
+
+    // 2) Mobile without SDK → use native share sheet (KakaoTalk appears in list)
+    if (isMobileDevice() && supportsNativeShare()) {
+      await shareViaNative(shareUrl)
+      return
+    }
+
+    // 3) Desktop without SDK key → guide user
+    setKakaoError('Kakao App Key를 설정해주세요.')
+    setTimeout(() => setKakaoError(''), 4000)
+  }
+
+  // Button is usable when: SDK is ready OR mobile can fall back to native share
+  const kakaoClickable = kakaoReady || (isMobileDevice() && supportsNativeShare())
 
   const handleSms = () => {
     const shareUrl = getShareUrl()
@@ -122,17 +167,23 @@ export function ShareComponent({ config }: ComponentProps) {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', width: '100%', maxWidth: '400px' }}>
         {showKakao && (
-          <button
-            onClick={handleKakao}
-            disabled={!kakaoReady}
-            style={{ ...btnBase, background: '#FEE500', color: '#3C1E1E', opacity: kakaoReady ? 1 : 0.5 }}
-            title={!kakaoAppKey ? 'Kakao App Key가 설정되지 않았습니다' : undefined}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M9 1.5C4.86 1.5 1.5 4.19 1.5 7.5c0 2.12 1.32 3.98 3.3 5.08L4 15l3.27-2.12c.56.09 1.14.12 1.73.12 4.14 0 7.5-2.69 7.5-6S13.14 1.5 9 1.5z" fill="#3C1E1E"/>
-            </svg>
-            카카오톡
-          </button>
+          <div style={{ flex: 1, minWidth: '100px' }}>
+            <button
+              onClick={handleKakao}
+              disabled={!kakaoClickable && !kakaoReady}
+              style={{ ...btnBase, flex: 'unset', width: '100%', background: '#FEE500', color: '#3C1E1E', opacity: (kakaoClickable || kakaoReady) ? 1 : 0.5 }}
+            >
+              <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+                <ellipse cx="20" cy="19" rx="18" ry="16" fill="#3C1E1E"/>
+                <path d="M20 8C12.27 8 6 12.93 6 19c0 3.97 2.6 7.45 6.55 9.5L11 32l5.8-3.5c1 .16 2.1.25 3.2.25 7.73 0 14-4.93 14-11S27.73 8 20 8z" fill="#FEE500"/>
+                <path d="M13 17.5h2v6h-2v-6zm3.5 0h2l2.5 3.5V17.5h2v6h-2L18.5 20V23.5h-2v-6zm7 0h5v2h-1.5v4h-2v-4H23.5v-2z" fill="#3C1E1E"/>
+              </svg>
+              카카오톡
+            </button>
+            {kakaoError && (
+              <p style={{ fontSize: '11px', color: 'var(--danger)', textAlign: 'center', marginTop: '4px' }}>{kakaoError}</p>
+            )}
+          </div>
         )}
 
         {showSms && (
