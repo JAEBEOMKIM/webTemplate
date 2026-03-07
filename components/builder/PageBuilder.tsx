@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { componentRegistry } from '@/components/registry'
 import type { PageData, PageComponentData } from '@/components/registry/types'
+import { ThemeSelector } from '@/components/ui/ThemeSelector'
 import { GridLayout } from 'react-grid-layout'
 import type { Layout, LayoutItem } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
@@ -43,6 +44,7 @@ export function PageBuilder({ page, initialComponents }: Props) {
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [pageTheme, setPageTheme] = useState<string | null>(page.theme ?? null)
   const [draggingType, setDraggingType] = useState<string | null>(null)
   const draggingTypeRef = useRef<string | null>(null)
   const [containerWidth, setContainerWidth] = useState(800)
@@ -172,6 +174,11 @@ export function PageBuilder({ page, initialComponents }: Props) {
     await supabase.from('pages').update({ is_published: !page.is_published }).eq('id', page.id)
     router.refresh()
     setSaving(false)
+  }
+
+  const handleThemeChange = async (themeId: string | null) => {
+    setPageTheme(themeId)
+    await supabase.from('pages').update({ theme: themeId }).eq('id', page.id)
   }
 
   return (
@@ -421,10 +428,13 @@ export function PageBuilder({ page, initialComponents }: Props) {
               />
             </div>
           ) : (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '48px' }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.35 }}>⚙️</div>
-              <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>컴포넌트를 선택하면</p>
-              <p style={{ fontSize: '12px', lineHeight: 1.6 }}>크기와 설정을 변경할 수 있습니다</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <ThemeSelector value={pageTheme} onChange={handleThemeChange} />
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '16px' }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.35 }}>⚙️</div>
+                <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>컴포넌트를 선택하면</p>
+                <p style={{ fontSize: '12px', lineHeight: 1.6 }}>크기와 설정을 변경할 수 있습니다</p>
+              </div>
             </div>
           )}
         </div>

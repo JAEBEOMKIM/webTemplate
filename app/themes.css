@@ -1,0 +1,202 @@
+/* =========================================
+   Per-page theme overrides
+   Each .theme-{id} class scopes CSS variables
+   to its subtree. Dark variants use .dark ancestor.
+   ========================================= */
+
+/* ── Default: inherits globals.css — no overrides needed ── */
+
+/* ── Minimal ── */
+.theme-minimal {
+  --bg-primary: #fafaf9;
+  --bg-secondary: #f5f5f4;
+  --bg-card: #fafaf9;
+  --bg-card-hover: #e7e5e4;
+  --border: #d6d3d1;
+  --border-subtle: #e7e5e4;
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-muted: #a8a29e;
+  --accent: #292524;
+  --accent-hover: #44403c;
+  --accent-subtle: #f5f5f4;
+  --accent-text: #292524;
+  --success: #15803d;
+  --danger: #b91c1c;
+  --warning: #a16207;
+  font-family: var(--font-serif-kr), 'Georgia', 'Times New Roman', serif;
+}
+.dark .theme-minimal {
+  --bg-primary: #1c1917;
+  --bg-secondary: #292524;
+  --bg-card: #292524;
+  --bg-card-hover: #44403c;
+  --border: #44403c;
+  --border-subtle: #292524;
+  --text-primary: #e7e5e4;
+  --text-secondary: #a8a29e;
+  --text-muted: #78716c;
+  --accent: #d6d3d1;
+  --accent-hover: #e7e5e4;
+  --accent-subtle: #292524;
+  --accent-text: #d6d3d1;
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+}
+
+/* ── Nature ── */
+.theme-nature {
+  --bg-primary: #fefdf8;
+  --bg-secondary: #f0fdf4;
+  --bg-card: #ffffff;
+  --bg-card-hover: #dcfce7;
+  --border: #bbf7d0;
+  --border-subtle: #dcfce7;
+  --text-primary: #1b4332;
+  --text-secondary: #2d6a4f;
+  --text-muted: #74c69d;
+  --accent: #2d6a4f;
+  --accent-hover: #1b4332;
+  --accent-subtle: #d8f3dc;
+  --accent-text: #2d6a4f;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #ca8a04;
+  font-family: var(--font-sans-kr), 'Noto Sans KR', system-ui, sans-serif;
+}
+.dark .theme-nature {
+  --bg-primary: #0f1f15;
+  --bg-secondary: #1a2e1f;
+  --bg-card: #1a2e1f;
+  --bg-card-hover: #243c2a;
+  --border: #2d5a3a;
+  --border-subtle: #1a2e1f;
+  --text-primary: #d8f3dc;
+  --text-secondary: #95d5b2;
+  --text-muted: #40916c;
+  --accent: #52b788;
+  --accent-hover: #74c69d;
+  --accent-subtle: #1a2e1f;
+  --accent-text: #74c69d;
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+}
+
+/* ── Sunset ── */
+.theme-sunset {
+  --bg-primary: #fffbf5;
+  --bg-secondary: #fff7ed;
+  --bg-card: #ffffff;
+  --bg-card-hover: #ffedd5;
+  --border: #fed7aa;
+  --border-subtle: #ffedd5;
+  --text-primary: #431407;
+  --text-secondary: #9a3412;
+  --text-muted: #c2793b;
+  --accent: #ea580c;
+  --accent-hover: #c2410c;
+  --accent-subtle: #fff7ed;
+  --accent-text: #ea580c;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #d97706;
+  font-family: var(--font-sans-kr), 'Noto Sans KR', system-ui, sans-serif;
+}
+.dark .theme-sunset {
+  --bg-primary: #1c1008;
+  --bg-secondary: #2a1a0e;
+  --bg-card: #2a1a0e;
+  --bg-card-hover: #3d2514;
+  --border: #5c3a1e;
+  --border-subtle: #2a1a0e;
+  --text-primary: #fed7aa;
+  --text-secondary: #fb923c;
+  --text-muted: #9a5a2e;
+  --accent: #fb923c;
+  --accent-hover: #fdba74;
+  --accent-subtle: #2a1a0e;
+  --accent-text: #fdba74;
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+}
+
+/* ── Ocean ── */
+.theme-ocean {
+  --bg-primary: #f0fdfa;
+  --bg-secondary: #ccfbf1;
+  --bg-card: #ffffff;
+  --bg-card-hover: #99f6e4;
+  --border: #99f6e4;
+  --border-subtle: #ccfbf1;
+  --text-primary: #134e4a;
+  --text-secondary: #0f766e;
+  --text-muted: #5eead4;
+  --accent: #0d9488;
+  --accent-hover: #0f766e;
+  --accent-subtle: #ccfbf1;
+  --accent-text: #0d9488;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #d97706;
+  font-family: var(--font-sans-kr), 'Noto Sans KR', system-ui, sans-serif;
+}
+.dark .theme-ocean {
+  --bg-primary: #0a1a1a;
+  --bg-secondary: #132626;
+  --bg-card: #132626;
+  --bg-card-hover: #1a3636;
+  --border: #1a4a4a;
+  --border-subtle: #132626;
+  --text-primary: #ccfbf1;
+  --text-secondary: #5eead4;
+  --text-muted: #2a7a6e;
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-subtle: #132626;
+  --accent-text: #5eead4;
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+}
+
+/* ── Rose ── */
+.theme-rose {
+  --bg-primary: #fff5f7;
+  --bg-secondary: #ffe4e9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fecdd3;
+  --border: #fecdd3;
+  --border-subtle: #ffe4e9;
+  --text-primary: #4c0519;
+  --text-secondary: #9f1239;
+  --text-muted: #f472b6;
+  --accent: #e11d48;
+  --accent-hover: #be123c;
+  --accent-subtle: #ffe4e9;
+  --accent-text: #e11d48;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #d97706;
+  font-family: var(--font-sans-kr), 'Noto Sans KR', system-ui, sans-serif;
+}
+.dark .theme-rose {
+  --bg-primary: #1a0a10;
+  --bg-secondary: #2a1018;
+  --bg-card: #2a1018;
+  --bg-card-hover: #3d1522;
+  --border: #5c1a30;
+  --border-subtle: #2a1018;
+  --text-primary: #ffe4e9;
+  --text-secondary: #fb7185;
+  --text-muted: #9a2040;
+  --accent: #fb7185;
+  --accent-hover: #fda4af;
+  --accent-subtle: #2a1018;
+  --accent-text: #fda4af;
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+}

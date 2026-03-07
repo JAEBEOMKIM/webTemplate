@@ -211,7 +211,15 @@ export function DynamicPage({ page, components, requiresPassword, requiresInvite
     }
   }, [page.id])
 
-  if (requiresPassword && !unlocked) return <PasswordGate page={page} onUnlock={() => setUnlocked(true)} />
-  if (requiresInviteCode && !unlocked && user) return <InviteCodeGate page={page} user={user} onUnlock={() => setUnlocked(true)} />
-  return <PageContent page={page} components={components} />
+  const themeClass = page.theme && page.theme !== 'default' ? `theme-${page.theme}` : ''
+
+  const content = (() => {
+    if (requiresPassword && !unlocked) return <PasswordGate page={page} onUnlock={() => setUnlocked(true)} />
+    if (requiresInviteCode && !unlocked && user) return <InviteCodeGate page={page} user={user} onUnlock={() => setUnlocked(true)} />
+    return <PageContent page={page} components={components} />
+  })()
+
+  return themeClass
+    ? <div className={themeClass}>{content}</div>
+    : content
 }

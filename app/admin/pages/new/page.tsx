@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { ThemeSelector } from '@/components/ui/ThemeSelector'
 
 export default function NewPagePage() {
   const router = useRouter()
-  const [form, setForm] = useState({ title: '', slug: '', description: '', access_type: 'public', password: '' })
+  const [form, setForm] = useState({ title: '', slug: '', description: '', access_type: 'public', password: '', theme: null as string | null })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -25,6 +26,7 @@ export default function NewPagePage() {
     const insertData: Record<string, unknown> = {
       title: form.title, slug: form.slug, description: form.description || null,
       access_type: form.access_type, is_published: false, created_by: user?.id,
+      theme: form.theme,
     }
 
     if (form.access_type === 'password' && form.password) {
@@ -109,6 +111,8 @@ export default function NewPagePage() {
               <input type="password" className="input" required value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="접근 비밀번호 입력" />
             </div>
           )}
+
+          <ThemeSelector value={form.theme} onChange={theme => setForm(f => ({ ...f, theme }))} />
 
           {error && <p style={{ fontSize: '13px', color: 'var(--danger)' }}>{error}</p>}
 

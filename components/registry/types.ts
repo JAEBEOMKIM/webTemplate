@@ -45,6 +45,7 @@ export interface PageData {
   access_type: 'public' | 'password' | 'oauth'
   password_hash: string | null
   is_published: boolean
+  theme: string | null
   created_at: string
   updated_at: string
 }
