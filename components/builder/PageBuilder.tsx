@@ -27,6 +27,33 @@ interface Props {
   initialComponents: PageComponentData[]
 }
 
+function PanelToggle({ label, collapsed, onClick }: { label: string; collapsed: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        writingMode: collapsed ? 'vertical-rl' : undefined,
+        padding: collapsed ? '12px 6px' : '6px 10px',
+        background: 'var(--bg-secondary)',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '11px',
+        fontWeight: 700,
+        color: 'var(--text-muted)',
+        letterSpacing: '0.05em',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        flexShrink: 0,
+      }}
+      title={collapsed ? `${label} 열기` : `${label} 닫기`}
+    >
+      <span style={{ fontSize: '10px', transform: collapsed ? 'rotate(90deg)' : undefined }}>{collapsed ? '▶' : '◀'}</span>
+      {collapsed && <span>{label}</span>}
+    </button>
+  )
+}
+
 export function PageBuilder({ page, initialComponents }: Props) {
   const router = useRouter()
   const supabase = createClient()
@@ -49,6 +76,58 @@ export function PageBuilder({ page, initialComponents }: Props) {
   const draggingTypeRef = useRef<string | null>(null)
   const [containerWidth, setContainerWidth] = useState(800)
   const [dropError, setDropError] = useState<string | null>(null)
+
+  // Panel collapse states
+  const [paletteCollapsed, setPaletteCollapsed] = useState(false)
+  const [configCollapsed, setConfigCollapsed] = useState(false)
+
+  // Resizable panel widths
+  const [paletteWidth, setPaletteWidth] = useState(180)
+  const [configWidth, setConfigWidth] = useState(260)
+  // 'palette' = dragging palette right edge, 'config' = dragging config left edge, null = idle
+  const resizingPanel = useRef<'palette' | 'config' | null>(null)
+  const startXRef = useRef(0)
+  const startWidthRef = useRef(0)
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizingPanel.current) return
+      const delta = e.clientX - startXRef.current
+      if (resizingPanel.current === 'palette') {
+        setPaletteWidth(Math.max(140, Math.min(320, startWidthRef.current + delta)))
+      } else {
+        setConfigWidth(Math.max(200, Math.min(500, startWidthRef.current - delta)))
+      }
+    }
+    const onMouseUp = () => {
+      if (!resizingPanel.current) return
+      resizingPanel.current = null
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
+
+  const startResizePalette = useCallback((e: React.MouseEvent) => {
+    resizingPanel.current = 'palette'
+    startXRef.current = e.clientX
+    startWidthRef.current = paletteWidth
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [paletteWidth])
+
+  const startResizeConfig = useCallback((e: React.MouseEvent) => {
+    resizingPanel.current = 'config'
+    startXRef.current = e.clientX
+    startWidthRef.current = configWidth
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [configWidth])
 
   const selectedComponent = components.find(c => c.id === selectedId) ?? null
   const selectedDef = selectedComponent ? componentRegistry.get(selectedComponent.component_type) : null
@@ -78,7 +157,6 @@ export function PageBuilder({ page, initialComponents }: Props) {
     )
   }, [supabase])
 
-  // Optimistic update: add to state immediately, sync to DB in background
   const addComponentToCanvas = useCallback((type: string, gridX: number, gridY: number) => {
     const def = componentRegistry.get(type)
     if (!def) return
@@ -99,13 +177,11 @@ export function PageBuilder({ page, initialComponents }: Props) {
       grid_h: sizes.h,
     }
 
-    // 1. 즉시 UI에 반영 (낙관적 업데이트)
     setComponents(prev => [...prev, newComp])
     setLayout(prev => [...prev, { i: newId, x: gridX, y: gridY, w: sizes.w, h: sizes.h }])
     setSelectedId(newId)
     setDropError(null)
 
-    // 2. 백그라운드에서 DB 저장
     supabase
       .from('page_components')
       .insert({
@@ -121,7 +197,6 @@ export function PageBuilder({ page, initialComponents }: Props) {
       })
       .then(({ error }) => {
         if (error) {
-          // 실패 시 롤백
           console.error('[PageBuilder] 컴포넌트 추가 실패:', error.message)
           setDropError(`추가 실패: ${error.message}`)
           setComponents(prev => prev.filter(c => c.id !== newId))
@@ -131,7 +206,6 @@ export function PageBuilder({ page, initialComponents }: Props) {
       })
   }, [supabase, page.id, components.length])
 
-  // react-grid-layout onDrop 콜백 (그리드 위에 드롭 시)
   const handleDrop = (_newLayout: Layout, droppedItem: LayoutItem | undefined, e: Event) => {
     const type = (e as DragEvent).dataTransfer?.getData('text/plain') || draggingTypeRef.current
     setDraggingType(null)
@@ -140,7 +214,6 @@ export function PageBuilder({ page, initialComponents }: Props) {
     addComponentToCanvas(type, droppedItem.x, droppedItem.y)
   }
 
-  // 컨테이너 패딩 영역에 드롭된 경우 폴백 처리
   const handleContainerDrop = (e: React.DragEvent<HTMLDivElement>) => {
     const type = e.dataTransfer.getData('text/plain') || draggingTypeRef.current
     setDraggingType(null)
@@ -148,7 +221,6 @@ export function PageBuilder({ page, initialComponents }: Props) {
     if (!type) return
     e.preventDefault()
     e.stopPropagation()
-    // 좌상단에 추가 (사용자가 이후 드래그로 위치 조정 가능)
     const sizes = GRID_SIZES[type] ?? { w: 5, h: 4 }
     const gridY = components.length > 0
       ? Math.max(...layout.map(l => l.y + l.h))
@@ -181,56 +253,114 @@ export function PageBuilder({ page, initialComponents }: Props) {
     await supabase.from('pages').update({ theme: themeId }).eq('id', page.id)
   }
 
+  // Swap two components' grid positions (up/down)
+  const handleSwapPosition = useCallback(async (compId: string, direction: 'up' | 'down') => {
+    // Sort components by grid_y position
+    const sorted = [...components]
+      .map(c => {
+        const li = layout.find(l => l.i === c.id)
+        return { comp: c, y: li?.y ?? 0, h: li?.h ?? 1 }
+      })
+      .sort((a, b) => a.y - b.y)
+
+    const idx = sorted.findIndex(s => s.comp.id === compId)
+    if (idx < 0) return
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= sorted.length) return
+
+    const current = sorted[idx]
+    const target = sorted[swapIdx]
+
+    // Swap y positions: target gets current's y, current gets target's y
+    // Adjust so they don't overlap: stack them sequentially
+    const topItem = direction === 'up' ? target : current
+    const bottomItem = direction === 'up' ? current : target
+
+    const newTopY = topItem.y
+    const newBottomY = newTopY + (direction === 'up' ? current.h : target.h)
+
+    const newLayout = layout.map(l => {
+      if (l.i === current.comp.id) return { ...l, y: direction === 'up' ? newTopY : newBottomY }
+      if (l.i === target.comp.id) return { ...l, y: direction === 'up' ? newBottomY : newTopY }
+      return { ...l }
+    })
+
+    setLayout(newLayout)
+    await saveLayout(newLayout)
+  }, [components, layout, saveLayout])
+
   return (
     <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 120px)', minHeight: '600px', background: 'var(--bg-secondary)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)' }}>
 
       {/* Left: Component Palette */}
-      <div style={{
-        width: '180px', flexShrink: 0,
-        background: 'var(--bg-primary)', borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column',
-      }}>
-        <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>컴포넌트</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>드래그해서 추가</div>
-        </div>
-        <div style={{ padding: '8px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {Array.from(componentRegistry.values()).map(def => {
-            const size = GRID_SIZES[def.id]
-            return (
-              <div
-                key={def.id}
-                draggable
-                onDragStart={e => {
-                  draggingTypeRef.current = def.id
-                  setDraggingType(def.id)
-                  e.dataTransfer.setData('text/plain', def.id)
-                  e.dataTransfer.effectAllowed = 'copy'
-                }}
-                onDragEnd={() => {
-                  draggingTypeRef.current = null
-                  setDraggingType(null)
-                }}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  border: '1.5px dashed var(--border)',
-                  background: 'transparent',
-                  cursor: 'grab',
-                  userSelect: 'none',
-                }}
-                className="palette-item"
-              >
-                <div style={{ fontSize: '20px', marginBottom: '4px' }}>{def.icon}</div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>{def.name}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                  기본 {size?.w ?? '?'}×{size?.h ?? '?'}
+      {paletteCollapsed ? (
+        <PanelToggle label="컴포넌트" collapsed onClick={() => setPaletteCollapsed(false)} />
+      ) : (<>
+        <div style={{
+          width: `${paletteWidth}px`, flexShrink: 0,
+          background: 'var(--bg-primary)',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>컴포넌트</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>드래그해서 추가</div>
+            </div>
+            <button
+              onClick={() => setPaletteCollapsed(true)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: '0 2px', lineHeight: 1 }}
+              title="패널 접기"
+            >◀</button>
+          </div>
+          <div style={{ padding: '8px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {Array.from(componentRegistry.values()).map(def => {
+              const size = GRID_SIZES[def.id]
+              return (
+                <div
+                  key={def.id}
+                  draggable
+                  onDragStart={e => {
+                    draggingTypeRef.current = def.id
+                    setDraggingType(def.id)
+                    e.dataTransfer.setData('text/plain', def.id)
+                    e.dataTransfer.effectAllowed = 'copy'
+                  }}
+                  onDragEnd={() => {
+                    draggingTypeRef.current = null
+                    setDraggingType(null)
+                  }}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px dashed var(--border)',
+                    background: 'transparent',
+                    cursor: 'grab',
+                    userSelect: 'none',
+                  }}
+                  className="palette-item"
+                >
+                  <div style={{ fontSize: '20px', marginBottom: '4px' }}>{def.icon}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>{def.name}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                    기본 {size?.w ?? '?'}×{size?.h ?? '?'}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
-      </div>
+        {/* Palette resize handle */}
+        <div
+          onMouseDown={startResizePalette}
+          style={{
+            width: '5px', flexShrink: 0, cursor: 'col-resize',
+            background: 'var(--border)', transition: 'background 0.1s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--accent)' }}
+          onMouseLeave={e => { if (!resizingPanel.current) (e.currentTarget as HTMLDivElement).style.background = 'var(--border)' }}
+          title="드래그하여 패널 크기 조절"
+        />
+      </>)}
 
       {/* Center: Grid Canvas */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -313,18 +443,35 @@ export function PageBuilder({ page, initialComponents }: Props) {
             }}
             onLayoutChange={newLayout => {
               setLayout(prev => {
-                // 라이브러리가 아직 모르는 optimistic 아이템(방금 추가된)을 보존
                 const newIds = new Set(newLayout.map(l => l.i))
                 const preserved = prev.filter(l => !newIds.has(l.i))
-                return [...newLayout, ...preserved]
+                const merged = [...newLayout, ...preserved]
+                // Avoid update if nothing changed (prevents infinite loop)
+                const same = merged.length === prev.length && merged.every((item, i) => {
+                  const p = prev.find(pl => pl.i === item.i)
+                  return p && p.x === item.x && p.y === item.y && p.w === item.w && p.h === item.h
+                })
+                return same ? prev : merged
               })
             }}
             style={{ minHeight: `${MAX_ROWS * ROW_HEIGHT}px` }}
           >
-            {components.map(comp => {
+            {(() => {
+              // Pre-compute sorted order once for all components
+              const sortedIds = [...components]
+                .map(c => ({ id: c.id, y: layout.find(l => l.i === c.id)?.y ?? 0 }))
+                .sort((a, b) => a.y - b.y)
+                .map(s => s.id)
+              const sortedIndexMap = new Map(sortedIds.map((id, i) => [id, i]))
+
+              return components.map(comp => {
               const def = componentRegistry.get(comp.component_type)
               const isSelected = selectedId === comp.id
               const layoutItem = layout.find(l => l.i === comp.id)
+              const sortedIdx = sortedIndexMap.get(comp.id) ?? 0
+              const canMoveUp = sortedIdx > 0
+              const canMoveDown = sortedIdx < sortedIds.length - 1
+
               return (
                 <div
                   key={comp.id}
@@ -356,8 +503,31 @@ export function PageBuilder({ page, initialComponents }: Props) {
                         {(comp.config.title as string) || def?.name}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ fontSize: '10px', color: isSelected ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', fontFamily: 'monospace' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      {/* Up/Down swap buttons */}
+                      <button
+                        onClick={e => { e.stopPropagation(); handleSwapPosition(comp.id, 'up') }}
+                        disabled={!canMoveUp}
+                        style={{
+                          width: '18px', height: '18px', background: 'transparent', border: 'none',
+                          borderRadius: '3px', cursor: canMoveUp ? 'pointer' : 'default', fontSize: '10px',
+                          color: isSelected ? (canMoveUp ? 'white' : 'rgba(255,255,255,0.3)') : (canMoveUp ? 'var(--text-secondary)' : 'var(--border)'),
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: 0,
+                        }}
+                        title="위로 이동"
+                      >▲</button>
+                      <button
+                        onClick={e => { e.stopPropagation(); handleSwapPosition(comp.id, 'down') }}
+                        disabled={!canMoveDown}
+                        style={{
+                          width: '18px', height: '18px', background: 'transparent', border: 'none',
+                          borderRadius: '3px', cursor: canMoveDown ? 'pointer' : 'default', fontSize: '10px',
+                          color: isSelected ? (canMoveDown ? 'white' : 'rgba(255,255,255,0.3)') : (canMoveDown ? 'var(--text-secondary)' : 'var(--border)'),
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, padding: 0,
+                        }}
+                        title="아래로 이동"
+                      >▼</button>
+                      <span style={{ fontSize: '10px', color: isSelected ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)', fontFamily: 'monospace', marginLeft: '2px' }}>
                         {layoutItem?.w ?? 0}×{layoutItem?.h ?? 0}
                       </span>
                       <button
@@ -380,65 +550,85 @@ export function PageBuilder({ page, initialComponents }: Props) {
                   </div>
                 </div>
               )
-            })}
+            })})()}
           </GridLayout>
         </div>
       </div>
 
       {/* Right: Config Panel */}
-      <div style={{
-        width: '260px', flexShrink: 0,
-        background: 'var(--bg-primary)', borderLeft: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column',
-      }}>
-        <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {selectedDef ? `${selectedDef.icon} ${selectedDef.name} 설정` : '설정 패널'}
+      {configCollapsed ? (
+        <PanelToggle label="설정" collapsed onClick={() => setConfigCollapsed(false)} />
+      ) : (<>
+        {/* Resize handle */}
+        <div
+          onMouseDown={startResizeConfig}
+          style={{
+            width: '5px', flexShrink: 0, cursor: 'col-resize',
+            background: 'var(--border)', transition: 'background 0.1s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--accent)' }}
+          onMouseLeave={e => { if (!resizingPanel.current) (e.currentTarget as HTMLDivElement).style.background = 'var(--border)' }}
+          title="드래그하여 패널 크기 조절"
+        />
+        <div style={{
+          width: `${configWidth}px`, flexShrink: 0,
+          background: 'var(--bg-primary)',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {selectedDef ? `${selectedDef.icon} ${selectedDef.name} 설정` : '설정 패널'}
+            </div>
+            <button
+              onClick={() => setConfigCollapsed(true)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: '0 2px', lineHeight: 1 }}
+              title="패널 접기"
+            >▶</button>
           </div>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-          {selectedComponent && selectedDef ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <GridSizeControl
-                componentId={selectedComponent.id}
-                layout={layout}
-                onLayoutChange={setLayout}
-                onSave={saveLayout}
-              />
-              <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
-              {/* 공통 옵션 */}
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>공통 옵션</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <input
-                    type="checkbox"
-                    id="common-show-border"
-                    checked={(selectedComponent.config.show_border as boolean) !== false}
-                    onChange={e => handleConfigChange(selectedComponent.id, { ...selectedComponent.config, show_border: e.target.checked })}
-                    style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
-                  />
-                  <label htmlFor="common-show-border" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>테두리 표시</label>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+            {selectedComponent && selectedDef ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <GridSizeControl
+                  componentId={selectedComponent.id}
+                  layout={layout}
+                  onLayoutChange={setLayout}
+                  onSave={saveLayout}
+                />
+                <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+                {/* 공통 옵션 */}
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>공통 옵션</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      id="common-show-border"
+                      checked={(selectedComponent.config.show_border as boolean) !== false}
+                      onChange={e => handleConfigChange(selectedComponent.id, { ...selectedComponent.config, show_border: e.target.checked })}
+                      style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
+                    />
+                    <label htmlFor="common-show-border" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>테두리 표시</label>
+                  </div>
+                </div>
+                <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+                <selectedDef.ConfigForm
+                  config={selectedComponent.config}
+                  onChange={config => handleConfigChange(selectedComponent.id, config)}
+                  componentId={selectedComponent.id}
+                />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <ThemeSelector value={pageTheme} onChange={handleThemeChange} />
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '16px' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.35 }}>⚙️</div>
+                  <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>컴포넌트를 선택하면</p>
+                  <p style={{ fontSize: '12px', lineHeight: 1.6 }}>크기와 설정을 변경할 수 있습니다</p>
                 </div>
               </div>
-              <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
-              <selectedDef.ConfigForm
-                config={selectedComponent.config}
-                onChange={config => handleConfigChange(selectedComponent.id, config)}
-                componentId={selectedComponent.id}
-              />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <ThemeSelector value={pageTheme} onChange={handleThemeChange} />
-              <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '16px' }}>
-                <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.35 }}>⚙️</div>
-                <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>컴포넌트를 선택하면</p>
-                <p style={{ fontSize: '12px', lineHeight: 1.6 }}>크기와 설정을 변경할 수 있습니다</p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </>)}
 
       <style>{`
         .palette-item:hover {
