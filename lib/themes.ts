@@ -29,6 +29,22 @@ export interface ThemeDefinition {
 
 export const themes: ThemeDefinition[] = [
   {
+    id: 'notebook',
+    name: '노트북',
+    description: '손글씨 느낌의 Architects Daughter, 크림빛 포인트',
+    fontLabel: 'Architects Daughter',
+    preview:     { bg: '#f9f9f9', accent: '#606060', text: '#3a3a3a', card: '#ffffff' },
+    previewDark: { bg: '#2b2b2b', accent: '#b0b0b0', text: '#dcdcdc', card: '#333333' },
+  },
+  {
+    id: 'solar-dusk',
+    name: '솔라 더스크',
+    description: '황혼의 앰버 & 스톤, 따뜻한 노을빛',
+    fontLabel: 'Oxanium',
+    preview:     { bg: '#FDFBF7', accent: '#B45309', text: '#4A3B33', card: '#F8F4EE' },
+    previewDark: { bg: '#1C1917', accent: '#F97316', text: '#F5F5F4', card: '#292524' },
+  },
+  {
     id: 'default',
     name: '기본',
     description: '깔끔한 블루 액센트, 프로페셔널한 디자인',

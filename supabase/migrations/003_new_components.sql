@@ -9,3 +9,4 @@ INSERT INTO component_definitions (id, name, description, icon, default_config) 
   ('share',     '공유하기',    '카카오톡, 문자, 링크 복사 공유 버튼',        '🔗', '{"title": "공유하기", "description": "", "show_kakao": true, "show_sms": true, "show_copy": true, "kakao_app_key": ""}'),
   ('timetable', '하루 일정표', '시간별 하루 일정을 시각적으로 표시',         '🗓️', '{"title": "하루 일정", "events": [], "start_hour": 8, "end_hour": 22}')
 ON CONFLICT (id) DO NOTHING;
+

@@ -1,3 +1,6 @@
+import { AccordionComponent, AccordionConfigForm } from './accordion/AccordionComponent'
+import { BentoGalleryComponent, BentoGalleryConfigForm } from './bento-gallery/BentoGalleryComponent'
+import { DonutChartComponent, DonutChartConfigForm } from './donut-chart/DonutChartComponent'
 import { BoardComponent, BoardConfigForm } from './board/BoardComponent'
 import { CalendarComponent, CalendarConfigForm } from './calendar/CalendarComponent'
 import { SurveyComponent, SurveyConfigForm } from './survey/SurveyComponent'
@@ -10,6 +13,83 @@ import { KakaoMapComponent, KakaoMapConfigForm } from './kakaomap/KakaoMapCompon
 import type { ComponentDefinition } from './types'
 
 export const componentRegistry = new Map<string, ComponentDefinition>([
+  [
+    'accordion',
+    {
+      id: 'accordion',
+      name: '아코디언',
+      description: '다단계 아코디언 + 펼침 목록 컴포넌트',
+      icon: '📂',
+      defaultConfig: {
+        title: '',
+        items: [
+          {
+            id: 'item-1',
+            title: '회사 소개',
+            icon: '🏢',
+            color: 'blue',
+            children: [
+              { id: 'child-1-1', title: '미션', content: '우리의 미션은 고객의 삶을 개선하는 고품질 제품을 제공하는 것입니다.' },
+              { id: 'child-1-2', title: '핵심 가치', content: '정직함, 혁신, 고객 만족이 우리의 모든 활동의 중심입니다.' },
+            ],
+          },
+          {
+            id: 'item-2',
+            title: '서비스 안내',
+            icon: '📋',
+            color: 'teal',
+            children: [
+              { id: 'child-2-1', title: '기본 서비스', content: '기본 서비스에 대한 안내 내용입니다.' },
+              { id: 'child-2-2', title: '프리미엄 서비스', content: '프리미엄 서비스에 대한 안내 내용입니다.' },
+            ],
+          },
+        ],
+      },
+      Component: AccordionComponent,
+      ConfigForm: AccordionConfigForm,
+    },
+  ],
+  [
+    'bento-gallery',
+    {
+      id: 'bento-gallery',
+      name: '벤토 갤러리',
+      description: '드래그 가능한 인터랙티브 이미지/영상 갤러리',
+      icon: '🎨',
+      defaultConfig: {
+        title: '갤러리',
+        description: '이미지와 영상 컬렉션',
+        items: [
+          { id: 'bg-1', type: 'image', title: '숲 속 길', desc: '신비로운 숲 속 트레일', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800', span: 'md:col-span-1 md:row-span-3 sm:col-span-1 sm:row-span-2' },
+          { id: 'bg-2', type: 'image', title: '해변 낙조', desc: '열대 해변의 일몰', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800', span: 'md:col-span-2 md:row-span-2 sm:col-span-2 sm:row-span-2' },
+          { id: 'bg-3', type: 'image', title: '가을 단풍', desc: '가을 풍경', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800', span: 'md:col-span-1 md:row-span-3 sm:col-span-1 sm:row-span-2' },
+          { id: 'bg-4', type: 'image', title: '산악 풍경', desc: '장엄한 산맥', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800', span: 'md:col-span-2 md:row-span-2 sm:col-span-2 sm:row-span-2' },
+        ],
+      },
+      Component: BentoGalleryComponent,
+      ConfigForm: BentoGalleryConfigForm,
+    },
+  ],
+  [
+    'donut-chart',
+    {
+      id: 'donut-chart',
+      name: '도넛 차트',
+      description: '인터랙티브 도넛 차트 + 범례',
+      icon: '🍩',
+      defaultConfig: {
+        title: '',
+        segments: [
+          { id: 'seg-1', label: '항목 A', value: 40, color: '#3b82f6' },
+          { id: 'seg-2', label: '항목 B', value: 30, color: '#22c55e' },
+          { id: 'seg-3', label: '항목 C', value: 20, color: '#f97316' },
+          { id: 'seg-4', label: '항목 D', value: 10, color: '#a855f7' },
+        ],
+      },
+      Component: DonutChartComponent,
+      ConfigForm: DonutChartConfigForm,
+    },
+  ],
   [
     'board',
     {

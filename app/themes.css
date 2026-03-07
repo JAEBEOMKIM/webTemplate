@@ -4,7 +4,88 @@
    to its subtree. Dark variants use .dark ancestor.
    ========================================= */
 
+@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;500;600;700&display=swap');
+
 /* ── Default: inherits globals.css — no overrides needed ── */
+
+/* ── Notebook ── */
+.theme-notebook {
+  --bg-primary: #f9f9f9;
+  --bg-secondary: #e3e3e3;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f0f0;
+  --border: #747272;
+  --border-subtle: #d0d0d0;
+  --text-primary: #3a3a3a;
+  --text-secondary: #505050;
+  --text-muted: #a0a0a0;
+  --accent: #606060;
+  --accent-hover: #404040;
+  --accent-subtle: #f3eac8;
+  --accent-text: #5d4037;
+  --success: #15803d;
+  --danger: #b91c1c;
+  --warning: #a16207;
+  font-family: 'Architects Daughter', cursive;
+}
+.dark .theme-notebook {
+  --bg-primary: #2b2b2b;
+  --bg-secondary: #383838;
+  --bg-card: #333333;
+  --bg-card-hover: #3d3d3d;
+  --border: #4f4f4f;
+  --border-subtle: #3d3d3d;
+  --text-primary: #dcdcdc;
+  --text-secondary: #c0c0c0;
+  --text-muted: #a0a0a0;
+  --accent: #b0b0b0;
+  --accent-hover: #c8c8c8;
+  --accent-subtle: #454545;
+  --accent-text: #dcdcdc;
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+}
+
+/* ── Solar Dusk ── */
+.theme-solar-dusk {
+  --bg-primary: #FDFBF7;
+  --bg-secondary: #F1E9DA;
+  --bg-card: #F8F4EE;
+  --bg-card-hover: #f2daba;
+  --border: #E4D9BC;
+  --border-subtle: #F1E9DA;
+  --text-primary: #4A3B33;
+  --text-secondary: #57534E;
+  --text-muted: #78716C;
+  --accent: #B45309;
+  --accent-hover: #92400e;
+  --accent-subtle: #f2daba;
+  --accent-text: #B45309;
+  --success: #15803d;
+  --danger: #b91c1c;
+  --warning: #a16207;
+  font-family: 'Oxanium', sans-serif;
+}
+.dark .theme-solar-dusk {
+  --bg-primary: #1C1917;
+  --bg-secondary: #292524;
+  --bg-card: #292524;
+  --bg-card-hover: #3a302c;
+  --border: #44403C;
+  --border-subtle: #292524;
+  --text-primary: #F5F5F4;
+  --text-secondary: #E7E5E4;
+  --text-muted: #A8A29E;
+  --accent: #F97316;
+  --accent-hover: #EA580C;
+  --accent-subtle: #3a2518;
+  --accent-text: #F97316;
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
+}
 
 /* ── Minimal ── */
 .theme-minimal {
