@@ -44,7 +44,7 @@ function useKakaoSdk(appKey: string) {
 }
 
 function isMobileDevice() {
-  return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  return typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 }
 
 function supportsNativeShare() {
@@ -63,7 +63,12 @@ export function ShareComponent({ config }: ComponentProps) {
 
   const [copied, setCopied] = useState(false)
   const [kakaoError, setKakaoError] = useState('')
+  const [isMobile, setIsMobile] = useState(false)
   const kakaoReady = useKakaoSdk(showKakao ? kakaoAppKey : '')
+
+  useEffect(() => {
+    setIsMobile(isMobileDevice() && supportsNativeShare())
+  }, [])
 
   const getShareUrl = () => typeof window !== 'undefined' ? window.location.href : ''
 
@@ -118,7 +123,7 @@ export function ShareComponent({ config }: ComponentProps) {
   }
 
   // Button is usable when: SDK is ready OR mobile can fall back to native share
-  const kakaoClickable = kakaoReady || (isMobileDevice() && supportsNativeShare())
+  const kakaoClickable = kakaoReady || isMobile
 
   const handleSms = () => {
     const shareUrl = getShareUrl()
