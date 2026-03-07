@@ -41,25 +41,22 @@ function formatKo(t: string): string {
 // Display component
 // ──────────────────────────────────────────────
 export function TimetableComponent({ config }: ComponentProps) {
-  const title       = (config.title as string) || '하루 일정'
-  const events      = (config.events as TimetableEvent[]) || []
-  const startHour   = typeof config.start_hour === 'number' ? config.start_hour : 8
-  const endHour     = typeof config.end_hour   === 'number' ? config.end_hour   : 22
+  const title        = (config.title as string) || '하루 일정'
+  const events       = (config.events as TimetableEvent[]) || []
+  const startHour    = typeof config.start_hour === 'number' ? config.start_hour : 8
+  const endHour      = typeof config.end_hour   === 'number' ? config.end_hour   : 22
   const showTimeline = (config.show_timeline as boolean) !== false
   const showLegend   = (config.show_legend   as boolean) !== false
 
   const rangeStart  = startHour * 60
   const rangeEnd    = endHour   * 60
-  const totalSlots  = Math.round((rangeEnd - rangeStart) / SLOT_MIN)
-  const totalHeight = totalSlots * SLOT_PX
+  const totalHeight = Math.round((rangeEnd - rangeStart) / SLOT_MIN) * SLOT_PX
 
-  // slot index is 1-based (CSS grid)
-  const toSlot = (minutes: number) =>
-    Math.round((Math.max(rangeStart, Math.min(rangeEnd, minutes)) - rangeStart) / SLOT_MIN) + 1
+  // pixel position helpers (absolute layout)
+  const minToPx = (min: number) => (min - rangeStart) / 60 * HOUR_PX
 
   const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i)
 
-  // Accept events that have valid, non-overlapping (end > start) times
   const visible = events
     .filter(ev => {
       if (!ev.start_time || !ev.end_time) return false
@@ -68,13 +65,33 @@ export function TimetableComponent({ config }: ComponentProps) {
       return e > s && e > rangeStart && s < rangeEnd
     })
     .map(ev => {
-      const startMin = timeToMin(ev.start_time)
-      const endMin   = timeToMin(ev.end_time)
-      const startSlot = toSlot(startMin)
-      const endSlot   = toSlot(endMin)
-      return { ...ev, startSlot, endSlot, durationMin: endMin - startMin }
+      const startMin     = timeToMin(ev.start_time)
+      const endMin       = timeToMin(ev.end_time)
+      const clampedStart = Math.max(startMin, rangeStart)
+      const clampedEnd   = Math.min(endMin, rangeEnd)
+      const top          = minToPx(clampedStart)
+      const height       = minToPx(clampedEnd) - top
+      return { ...ev, startMin, endMin, durationMin: endMin - startMin, top, height }
     })
-    .sort((a, b) => a.startSlot - b.startSlot)
+    .sort((a, b) => a.startMin - b.startMin)
+
+  // Non-hour minute marks derived from event start/end times
+  const minuteMarks = Array.from(
+    new Set(
+      visible.flatMap(ev =>
+        [ev.startMin, ev.endMin].filter(
+          m => m % 60 !== 0 && m > rangeStart && m < rangeEnd
+        )
+      )
+    )
+  ).sort((a, b) => a - b)
+
+  // Hours that fall strictly INSIDE an event span — hide their label + divider
+  const hiddenHours = new Set(
+    hours.filter(h =>
+      visible.some(ev => ev.startMin < h * 60 && h * 60 < ev.endMin)
+    )
+  )
 
   if (events.length === 0) {
     return (
@@ -85,8 +102,7 @@ export function TimetableComponent({ config }: ComponentProps) {
     )
   }
 
-  // 마지막으로 렌더되는 섹션이 어느 것인지 판단
-  const legendVisible = showLegend && visible.length > 0
+  const legendVisible  = showLegend && visible.length > 0
   const timelineIsLast = showTimeline && !legendVisible
 
   return (
@@ -101,85 +117,121 @@ export function TimetableComponent({ config }: ComponentProps) {
 
       {/* ── Timeline ── */}
       {showTimeline && (
-        <div style={{
-          display: 'flex', alignItems: 'flex-start',
-          paddingBottom: timelineIsLast ? '12px' : '0',
-        }}>
-          {/* Time axis */}
-          <div style={{ width: '36px', flexShrink: 0, position: 'relative', height: `${totalHeight}px` }}>
-            {hours.map(h => (
-              <div
-                key={h}
-                style={{
-                  position: 'absolute',
-                  top:        `${(h - startHour) * HOUR_PX}px`,
-                  right:      '4px',
-                  fontSize:   '10px',
-                  lineHeight: 1,
-                  color:      'var(--text-muted)',
-                  transform:  'translateY(-50%)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {pad(h)}
+        <div style={{ display: 'flex', alignItems: 'flex-start', paddingBottom: timelineIsLast ? '12px' : '0' }}>
+
+          {/* ── Time axis ── */}
+          <div style={{ width: '46px', flexShrink: 0, position: 'relative', height: `${totalHeight}px` }}>
+            {/* Hour labels — hidden if strictly inside an event */}
+            {hours.filter(h => !hiddenHours.has(h)).map(h => (
+              <div key={h} style={{
+                position: 'absolute',
+                top: `${(h - startHour) * HOUR_PX}px`,
+                right: '6px',
+                fontSize: '10px',
+                fontWeight: 600,
+                lineHeight: 1,
+                color: 'var(--text-muted)',
+                transform: 'translateY(-50%)',
+                whiteSpace: 'nowrap',
+              }}>
+                {pad(h)}:00
+              </div>
+            ))}
+            {/* Minute labels at event start/end positions */}
+            {minuteMarks.map(min => (
+              <div key={min} style={{
+                position: 'absolute',
+                top: `${minToPx(min)}px`,
+                right: '6px',
+                fontSize: '9px',
+                lineHeight: 1,
+                color: 'var(--text-secondary)',
+                transform: 'translateY(-50%)',
+                whiteSpace: 'nowrap',
+              }}>
+                {pad(Math.floor(min / 60))}:{pad(min % 60)}
               </div>
             ))}
           </div>
 
-          {/* Events grid */}
-          <div
-            style={{
-              flex: 1,
-              display: 'grid',
-              gridTemplateColumns: '1fr',
-              gridTemplateRows: `repeat(${totalSlots}, ${SLOT_PX}px)`,
-              backgroundImage: `repeating-linear-gradient(
-                to bottom,
-                var(--border) 0px, var(--border) 1px,
-                transparent 1px, transparent ${HOUR_PX}px
-              )`,
-            }}
-          >
-            {visible.map(ev => (
-              <div
-                key={ev.id}
-                style={{
-                  gridColumn:   1,
-                  gridRow:      `${ev.startSlot} / ${ev.endSlot}`,
-                  background:   `${ev.color}22`,
-                  borderLeft:   `3px solid ${ev.color}`,
-                  borderRadius: '0 5px 5px 0',
-                  margin:       '1px 3px 1px 0',
-                  padding:      '2px 6px',
-                  overflow:     'hidden',
-                  minHeight:    0,
-                  alignSelf:    'stretch',
-                  justifySelf:  'stretch',
-                }}
-              >
-                <div style={{
-                  fontSize: '11px', fontWeight: 700,
-                  color: ev.color || 'var(--accent-text)',
-                  lineHeight: 1.3,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          {/* ── Events area (absolute positioning) ── */}
+          <div style={{ flex: 1, position: 'relative', height: `${totalHeight}px`, overflow: 'hidden' }}>
+
+            {/* Hour divider lines — hidden if strictly inside an event */}
+            {hours.filter(h => !hiddenHours.has(h)).map(h => (
+              <div key={h} style={{
+                position: 'absolute',
+                top: `${(h - startHour) * HOUR_PX}px`,
+                left: 0, right: 0,
+                height: '1px',
+                background: 'var(--border)',
+              }} />
+            ))}
+
+            {/* Minute tick lines at event boundaries */}
+            {minuteMarks.map(min => (
+              <div key={min} style={{
+                position: 'absolute',
+                top: `${minToPx(min)}px`,
+                left: 0, right: 0,
+                height: '1px',
+                background: 'var(--border-subtle)',
+                borderTop: '1px dashed var(--border)',
+              }} />
+            ))}
+
+            {/* Event blocks */}
+            {visible.map(ev => {
+              const shortEvent = ev.durationMin < 25
+              return (
+                <div key={ev.id} style={{
+                  position: 'absolute',
+                  top: `${ev.top + 1}px`,
+                  height: `${Math.max(ev.height - 2, SLOT_PX)}px`,
+                  left: 0,
+                  right: 4,
+                  /* opaque tinted background hides hour dividers within the event */
+                  backgroundColor: 'var(--bg-primary)',
+                  backgroundImage: `linear-gradient(${ev.color}22, ${ev.color}22)`,
+                  borderLeft: `3px solid ${ev.color}`,
+                  borderRadius: '0 6px 6px 0',
+                  padding: shortEvent ? '2px 8px' : '5px 8px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  zIndex: 1,
+                  boxSizing: 'border-box',
                 }}>
-                  {ev.title || '(제목 없음)'}
-                </div>
-                {ev.durationMin >= 20 && (
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px' }}>
-                    {ev.start_time} – {ev.end_time}
-                  </div>
-                )}
-                {ev.durationMin >= 45 && ev.description && (
                   <div style={{
-                    fontSize: '10px', color: 'var(--text-secondary)', marginTop: '1px',
+                    fontSize: '12px', fontWeight: 700,
+                    color: ev.color,
+                    lineHeight: 1.3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
-                    {ev.description}
+                    {ev.title || '(제목 없음)'}
                   </div>
-                )}
-              </div>
-            ))}
+                  {ev.durationMin >= 20 && (
+                    <div style={{
+                      fontSize: '11px', color: 'var(--text-secondary)',
+                      marginTop: '2px', lineHeight: 1.2,
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>
+                      {ev.start_time} – {ev.end_time}
+                    </div>
+                  )}
+                  {ev.durationMin >= 45 && ev.description && (
+                    <div style={{
+                      fontSize: '11px', color: 'var(--text-secondary)',
+                      marginTop: '2px', lineHeight: 1.2,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {ev.description}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
