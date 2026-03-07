@@ -30,6 +30,15 @@ function mdToHtml(md: string): string {
   // Blockquote (already escaped, so &gt; instead of >)
   html = html.replace(/^&gt; (.+)$/gm, '<blockquote style="border-left:3px solid var(--accent);margin:10px 0;padding:6px 14px;color:var(--text-secondary);background:var(--bg-secondary);border-radius:0 6px 6px 0">$1</blockquote>')
 
+  // Links (before bold/italic so * or ~ in URLs don't get corrupted)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+    // Decode HTML entities back for the href value
+    const href = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    const isExternal = /^https?:\/\//i.test(href)
+    const target = isExternal ? ' target="_blank" rel="noopener noreferrer"' : ''
+    return `<a href="${href}"${target} style="color:var(--accent-text);text-decoration:underline">${text}</a>`
+  })
+
   // Bold + italic
   html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -37,9 +46,6 @@ function mdToHtml(md: string): string {
 
   // Strikethrough
   html = html.replace(/~~(.+?)~~/g, '<del>$1</del>')
-
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--accent-text);text-decoration:underline">$1</a>')
 
   // Unordered lists
   html = html.replace(/((?:^- .+\n?)+)/gm, (match) => {
