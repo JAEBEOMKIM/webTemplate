@@ -46,6 +46,16 @@ export default async function SlugPage({ params }: Props) {
       redirect(`/auth/login?redirect=/${slug}`)
     }
 
+    // 유저 프로필 구성 (메타데이터 포함)
+    const meta = user.user_metadata || {}
+    const userProfile = {
+      id: user.id,
+      email: user.email,
+      full_name: (meta.full_name as string) || (meta.name as string) || '',
+      avatar_url: (meta.avatar_url as string) || (meta.picture as string) || '',
+      provider: (meta.provider as string) || '',
+    }
+
     // 접근 권한 확인
     const { data: grant } = await supabase
       .from('page_access_grants')
@@ -55,10 +65,10 @@ export default async function SlugPage({ params }: Props) {
       .single()
 
     if (!grant) {
-      return <>{tracker}<DynamicPage page={page} components={components || []} requiresInviteCode user={user} /></>
+      return <>{tracker}<DynamicPage page={page} components={components || []} requiresInviteCode user={userProfile} /></>
     }
 
-    return <>{tracker}<DynamicPage page={page} components={components || []} /></>
+    return <>{tracker}<DynamicPage page={page} components={components || []} user={userProfile} /></>
   }
 
   notFound()

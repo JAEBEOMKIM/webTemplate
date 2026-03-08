@@ -5,12 +5,49 @@ import { componentRegistry } from '@/components/registry'
 import type { PageData, PageComponentData } from '@/components/registry/types'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
+interface UserProfile {
+  id: string
+  email?: string
+  full_name?: string
+  avatar_url?: string
+  provider?: string
+}
+
 interface Props {
   page: PageData
   components: PageComponentData[]
   requiresPassword?: boolean
   requiresInviteCode?: boolean
-  user?: { id: string; email?: string }
+  user?: UserProfile
+}
+
+const PROVIDER_LABELS: Record<string, string> = {
+  naver: '네이버',
+  kakao: '카카오',
+  google: 'Google',
+}
+
+function UserAvatar({ user, size = 28 }: { user: UserProfile; size?: number }) {
+  const [imgError, setImgError] = useState(false)
+  const displayName = user.full_name || user.email || ''
+  const initials = displayName.charAt(0).toUpperCase()
+
+  if (user.avatar_url && !imgError) {
+    return (
+      <img
+        src={user.avatar_url}
+        alt={displayName}
+        onError={() => setImgError(true)}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+      />
+    )
+  }
+
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.42, fontWeight: 700, flexShrink: 0 }}>
+      {initials}
+    </div>
+  )
 }
 
 function GateLayout({ title, subtitle, icon, children }: { title: string; subtitle: string; icon: string; children: React.ReactNode }) {
@@ -81,7 +118,7 @@ function PasswordGate({ page, onUnlock }: { page: PageData; onUnlock: () => void
   )
 }
 
-function InviteCodeGate({ page, user, onUnlock }: { page: PageData; user: { id: string; email?: string }; onUnlock: () => void }) {
+function InviteCodeGate({ page, user, onUnlock }: { page: PageData; user: UserProfile; onUnlock: () => void }) {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -103,10 +140,31 @@ function InviteCodeGate({ page, user, onUnlock }: { page: PageData; user: { id: 
     setLoading(false)
   }
 
+  const providerLabel = user.provider ? PROVIDER_LABELS[user.provider] : ''
+
   return (
     <GateLayout title={page.title} subtitle="초대코드를 입력하세요" icon="🔑">
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>{user.email}</div>
+        {/* User info */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+          <UserAvatar user={user} size={32} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {user.full_name && (
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user.full_name}
+              </div>
+            )}
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user.email}
+            </div>
+          </div>
+          {providerLabel && (
+            <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', padding: '2px 7px', whiteSpace: 'nowrap' }}>
+              {providerLabel}
+            </div>
+          )}
+        </div>
+
         <input
           className="input"
           placeholder="XXXXXX"
@@ -131,7 +189,7 @@ const GRID_COLS = 10
 const GRID_ROW_HEIGHT = 60 // px
 const GRID_GAP = 8 // px
 
-function PageContent({ page, components }: { page: PageData; components: PageComponentData[] }) {
+function PageContent({ page, components, user }: { page: PageData; components: PageComponentData[]; user?: UserProfile }) {
   // 그리드 전체 높이 계산 (빈 공간 없이 딱 맞게)
   const gridRows = components.length > 0
     ? Math.max(...components.map(c => (c.grid_y ?? 0) + (c.grid_h ?? 6)))
@@ -143,7 +201,25 @@ function PageContent({ page, components }: { page: PageData; components: PageCom
       <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-primary)', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 20px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{page.title}</h1>
-          <ThemeToggle />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Authenticated user profile */}
+            {user && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UserAvatar user={user} size={26} />
+                {user.full_name && (
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.full_name}
+                  </span>
+                )}
+                {user.provider && PROVIDER_LABELS[user.provider] && (
+                  <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '1px 6px' }}>
+                    {PROVIDER_LABELS[user.provider]}
+                  </span>
+                )}
+              </div>
+            )}
+            <ThemeToggle />
+          </div>
         </div>
       </div>
 
@@ -163,7 +239,6 @@ function PageContent({ page, components }: { page: PageData; components: PageCom
             gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
             gridAutoRows: `${GRID_ROW_HEIGHT}px`,
             gap: `${GRID_GAP}px`,
-            // 빌더의 최대 행 수까지 공간 확보
             minHeight: gridRows > 0 ? `${gridRows * (GRID_ROW_HEIGHT + GRID_GAP) - GRID_GAP}px` : 'auto',
           }}>
             {components.map(comp => {
@@ -216,7 +291,7 @@ export function DynamicPage({ page, components, requiresPassword, requiresInvite
   const content = (() => {
     if (requiresPassword && !unlocked) return <PasswordGate page={page} onUnlock={() => setUnlocked(true)} />
     if (requiresInviteCode && !unlocked && user) return <InviteCodeGate page={page} user={user} onUnlock={() => setUnlocked(true)} />
-    return <PageContent page={page} components={components} />
+    return <PageContent page={page} components={components} user={user} />
   })()
 
   return themeClass

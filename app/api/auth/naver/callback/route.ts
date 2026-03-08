@@ -52,6 +52,16 @@ export async function GET(request: NextRequest) {
 
     if (existingUser) {
       userId = existingUser.id
+      // 기존 사용자: 네이버 메타데이터 업데이트
+      await adminClient.auth.admin.updateUserById(existingUser.id, {
+        user_metadata: {
+          ...existingUser.user_metadata,
+          full_name: naverUser.name || existingUser.user_metadata?.full_name,
+          avatar_url: naverUser.profile_image || existingUser.user_metadata?.avatar_url,
+          provider: 'naver',
+          naver_id: naverUser.id,
+        },
+      })
     } else {
       // 새 사용자 생성
       const { data: newUser, error } = await adminClient.auth.admin.createUser({
