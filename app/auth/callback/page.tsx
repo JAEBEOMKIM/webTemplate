@@ -61,8 +61,19 @@ function CallbackHandler() {
       }
 
       // ── 4. 이동 목적지 결정 ───────────────────────────────────────────
-      // 우선순위: ?next= > ?redirect= > 기본(/admin)
-      const next = searchParams.get('next') || searchParams.get('redirect') || '/admin'
+      // 우선순위: ?next= > ?redirect= > oauth_redirect 쿠키 > 기본(/admin)
+      const cookieRedirect = document.cookie
+        .split('; ')
+        .find(r => r.startsWith('oauth_redirect='))
+        ?.split('=')[1]
+      const cookiePath = cookieRedirect ? decodeURIComponent(cookieRedirect) : null
+
+      // 쿠키 소비 후 삭제
+      if (cookiePath) {
+        document.cookie = 'oauth_redirect=; max-age=0; path=/'
+      }
+
+      const next = searchParams.get('next') || searchParams.get('redirect') || cookiePath || '/admin'
       const redirectTo = next.startsWith('/') ? next : '/admin'
 
       // ── 5. 관리자 경로 접근 시 이메일 검증 ───────────────────────────

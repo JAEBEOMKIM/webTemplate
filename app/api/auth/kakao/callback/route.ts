@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
     const { data: otpData, error: otpError } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email,
-      options: { redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent(redirectPath)}` },
+      options: { redirectTo: `${appUrl}/auth/callback` },
     })
 
     if (otpError) {
@@ -140,8 +140,9 @@ export async function GET(request: NextRequest) {
 
     // oauth_redirect 쿠키를 유지한 채로 매직링크로 이동
     const response = NextResponse.redirect(otpData.properties.action_link)
+    // httpOnly: false → 클라이언트(/auth/callback page)에서 document.cookie로 읽어 이동 경로 복원
     response.cookies.set('oauth_redirect', redirectPath, {
-      httpOnly: true,
+      httpOnly: false,
       maxAge: 600,
       sameSite: 'lax',
       path: '/',

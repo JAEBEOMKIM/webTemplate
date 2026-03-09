@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       type: 'magiclink',
       email: naverUser.email,
       options: {
-        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
+        redirectTo: `${origin}/auth/callback`,
       },
     })
 
@@ -106,8 +106,9 @@ export async function GET(request: NextRequest) {
     // 쿠키(oauth_redirect)를 유지한 채로 매직링크로 이동
     const response = NextResponse.redirect(otpData.properties.action_link)
     // 쿠키 갱신 (브라우저가 외부 Supabase 도메인 거쳐 오는 동안 유지)
+    // httpOnly: false → 클라이언트(/auth/callback page)에서 document.cookie로 읽어 이동 경로 복원
     response.cookies.set('oauth_redirect', redirectPath, {
-      httpOnly: true,
+      httpOnly: false,
       maxAge: 600,
       sameSite: 'lax',
       path: '/',
