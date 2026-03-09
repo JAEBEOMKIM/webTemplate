@@ -25,21 +25,42 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // Required by @supabase/ssr — JWT 검증 + 토큰 갱신
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  // /admin 경로는 인증 필요
-  if (request.nextUrl.pathname.startsWith('/admin')) {
+  const { pathname } = request.nextUrl
+  const adminEmail =
+    process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || ''
+
+  // ── 루트(/) 처리 ────────────────────────────────────────────────────────
+  // app/page.tsx 의 redirect('/admin') 보다 proxy 가 먼저 실행되므로 여기서 처리
+  if (pathname === '/') {
     if (!user) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/auth/login'
-      url.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+    if (adminEmail && user.email !== adminEmail) {
+      const url = new URL('/unauthorized', request.url)
+      url.searchParams.set('email', user.email ?? '')
       return NextResponse.redirect(url)
     }
+    return NextResponse.redirect(new URL('/admin', request.url))
+  }
 
-    // 관리자 이메일 체크
-    const adminEmail = process.env.ADMIN_EMAIL
+  // ── /admin/* 보호 ────────────────────────────────────────────────────────
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    if (!user) {
+      const url = new URL('/auth/login', request.url)
+      url.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(url)
+    }
     if (adminEmail && user.email !== adminEmail) {
-      return NextResponse.redirect(new URL('/', request.url))
+      // ❌ 기존: redirect('/') → app/page.tsx → redirect('/admin') → 무한루프
+      // ✅ 수정: /unauthorized 로 직접 이동
+      const url = new URL('/unauthorized', request.url)
+      url.searchParams.set('email', user.email ?? '')
+      return NextResponse.redirect(url)
     }
   }
 
@@ -48,6 +69,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
