@@ -16,8 +16,11 @@ export async function GET(request: NextRequest) {
   const raw = cookieRedirect || queryRedirect || '/admin'
   const redirectTo = !raw || raw === 'null' || !raw.startsWith('/') ? '/admin' : raw
 
-  if (!code) {
-    // code 없이 콜백에 도달한 경우 (이미 처리된 링크 등)
+  const tokenHash = searchParams.get('token_hash')
+  const tokenType = searchParams.get('type')
+
+  // code도 token_hash도 없으면 처리 불가
+  if (!code && !tokenHash) {
     return NextResponse.redirect(`${origin}${redirectTo}`)
   }
 
@@ -41,10 +44,26 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+  // PKCE(code) 또는 매직링크 OTP(token_hash) 두 가지 방식 모두 처리
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let authResult: { data: any; error: any }
+
+  if (code) {
+    // Google OAuth 등 PKCE 방식
+    authResult = await supabase.auth.exchangeCodeForSession(code)
+  } else {
+    // Naver/Kakao 매직링크 OTP 방식
+    authResult = await supabase.auth.verifyOtp({
+      token_hash: tokenHash!,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      type: (tokenType as any) ?? 'email',
+    })
+  }
+
+  const { data, error } = authResult
 
   if (error) {
-    console.error('[Auth Callback] exchangeCodeForSession error:', error.message)
+    console.error('[Auth Callback] auth error:', error.message)
     return NextResponse.redirect(
       `${origin}/auth/login?error=callback_failed&detail=${encodeURIComponent(error.message)}`
     )
