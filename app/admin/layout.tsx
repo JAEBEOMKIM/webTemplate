@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import AdminSignOut from './AdminSignOut'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -15,8 +16,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // 관리자 이메일 체크 (ADMIN_EMAIL 설정 시)
   const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || ''
   if (adminEmail && user.email !== adminEmail) {
-    // 비관리자 로그인 사용자 → 에러 표시 (signOut은 서버 컴포넌트에서 불가, 클라이언트에서 처리)
-    redirect(`/auth/login?error=not_admin&email=${encodeURIComponent(user.email ?? '')}`)
+    // 비관리자 → 전용 권한없음 페이지 (로그인 페이지로 보내면 redirect loop 발생)
+    redirect(`/unauthorized?email=${encodeURIComponent(user.email ?? '')}`)
   }
 
   return (
@@ -75,6 +76,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div style={{ padding: '8px 12px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>테마</span>
             <ThemeToggle />
+          </div>
+          <div style={{ marginTop: '8px' }}>
+            <AdminSignOut />
           </div>
         </div>
       </div>
