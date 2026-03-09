@@ -76,19 +76,8 @@ function CallbackHandler() {
       const next = searchParams.get('next') || searchParams.get('redirect') || cookiePath || '/admin'
       const redirectTo = next.startsWith('/') ? next : '/admin'
 
-      // ── 5. 관리자 경로 접근 시 이메일 검증 ───────────────────────────
-      const isAdminPath = redirectTo === '/' || redirectTo === '/admin' || redirectTo.startsWith('/admin/')
-      if (isAdminPath) {
-        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || ''
-        if (adminEmail) {
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user?.email !== adminEmail) {
-            await supabase.auth.signOut()
-            router.replace(`/auth/login?error=not_admin&email=${encodeURIComponent(user?.email ?? '')}`)
-            return
-          }
-        }
-      }
+      // 관리자 권한 체크는 middleware.ts 에서 처리
+      // 비관리자가 /admin 에 접근하면 middleware 가 /unauthorized 로 리다이렉트
 
       // router.replace() 는 소프트 내비게이션 → 서버가 setSession() 쿠키를 못 읽을 수 있음
       // window.location.href 로 풀 리로드 → 브라우저가 최신 쿠키를 서버에 전달 보장
