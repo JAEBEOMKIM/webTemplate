@@ -79,7 +79,9 @@ function CallbackHandler() {
         }
       }
 
-      router.replace(redirectTo)
+      // router.replace() 는 소프트 내비게이션 → 서버가 setSession() 쿠키를 못 읽을 수 있음
+      // window.location.href 로 풀 리로드 → 브라우저가 최신 쿠키를 서버에 전달 보장
+      window.location.href = redirectTo
     }
 
     handleCallback()
