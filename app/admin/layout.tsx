@@ -1,10 +1,23 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  // 미인증 → 로그인 페이지
+  if (!user) {
+    redirect('/auth/login?redirect=/admin')
+  }
+
+  // 관리자 이메일 체크 (ADMIN_EMAIL 설정 시)
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || ''
+  if (adminEmail && user.email !== adminEmail) {
+    // 비관리자 로그인 사용자 → 에러 표시 (signOut은 서버 컴포넌트에서 불가, 클라이언트에서 처리)
+    redirect(`/auth/login?error=not_admin&email=${encodeURIComponent(user.email ?? '')}`)
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-secondary)' }}>

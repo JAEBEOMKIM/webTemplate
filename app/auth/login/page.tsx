@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { createClient } from '@/lib/supabase/client'
 
@@ -9,6 +9,13 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/admin'
   const errorParam = searchParams.get('error')
+
+  // not_admin 에러: 현재 로그인된 세션을 자동 로그아웃해야 다른 계정으로 재로그인 가능
+  useEffect(() => {
+    if (errorParam === 'not_admin') {
+      createClient().auth.signOut()
+    }
+  }, [errorParam])
   const hint = searchParams.get('hint')
 
   const [devEmail, setDevEmail] = useState(process.env.NEXT_PUBLIC_ADMIN_EMAIL || '')
