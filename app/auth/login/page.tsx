@@ -61,13 +61,19 @@ function LoginForm() {
 
   const step = searchParams.get('step')
   const detail = searchParams.get('detail')
+  const email = searchParams.get('email')
 
-  const errorMessage = errorParam === 'kakao_no_email'
-    ? (hint || '카카오 계정에서 이메일 제공 동의가 필요합니다')
+  const errorMessage =
+    errorParam === 'not_admin'
+      ? `관리자 계정이 아닙니다.${email ? ` (${email})` : ''} 관리자 권한이 있는 계정으로 로그인해 주세요.`
+    : errorParam === 'kakao_no_email'
+      ? (hint || '카카오 계정에서 이메일 제공 동의가 필요합니다')
     : errorParam === 'naver_auth_failed' || errorParam === 'kakao_auth_failed'
-    ? `소셜 로그인에 실패했습니다.${step ? ` (단계: ${step})` : ''}`
+      ? `소셜 로그인에 실패했습니다.${step ? ` (단계: ${step})` : ''}`
     : errorParam === 'no_code'
-    ? '인증 코드를 받지 못했습니다. 다시 시도해주세요.'
+      ? '인증 코드를 받지 못했습니다. 다시 시도해주세요.'
+    : errorParam === 'callback_failed'
+      ? `인증 처리 중 오류가 발생했습니다.`
     : null
 
   return (

@@ -28,11 +28,9 @@ export async function GET(request: NextRequest) {
   const redirectPath = cookieRedirect || stateRedirect
 
   // redirectTo 에 사용할 앱 베이스 URL
-  // NEXT_PUBLIC_APP_URL → VERCEL_URL → request origin 순으로 폴백
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-    origin
+  // request.url 의 origin 을 사용 (Vercel 에서 자동으로 올바른 도메인으로 설정됨)
+  // NEXT_PUBLIC_APP_URL 은 브라우저용이므로 서버사이드 redirectTo 에 사용하지 않음
+  const appUrl = origin
 
   try {
     // ── Step 1: 카카오 액세스 토큰 요청 ──────────────────────────
@@ -87,6 +85,9 @@ export async function GET(request: NextRequest) {
     const kakaoId = String(profileData.id || '')
 
     // ── Step 3: Supabase 사용자 upsert ───────────────────────────
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return errRedirect(origin, 'env', 'SUPABASE_SERVICE_ROLE_KEY 환경변수가 설정되지 않았습니다')
+    }
     const adminClient = await createAdminClient()
 
     let existingUser: { id: string; email?: string; user_metadata?: Record<string, unknown> } | undefined
