@@ -89,12 +89,12 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. 매직링크 방식으로 세션 생성
-    // redirectTo 에는 쿼리 파라미터 없이 순수 경로만 — Supabase 허용 URL 목록 매칭 용이
+    // ?next= 에 목적지를 포함 → 클라이언트 페이지(/auth/callback)가 읽어 이동
     const { data: otpData, error: otpError } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email: naverUser.email,
       options: {
-        redirectTo: `${origin}/auth/callback`,
+        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
       },
     })
 

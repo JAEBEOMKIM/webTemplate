@@ -124,16 +124,15 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Step 4: 매직링크 세션 생성 ────────────────────────────────
-    // Supabase 대시보드 > Auth > URL Configuration > Redirect URLs 에
-    // "${appUrl}/auth/callback" 이 등록되어 있어야 합니다.
+    // ?next= 에 목적지를 포함 → 클라이언트 페이지(/auth/callback)가 읽어 이동
     const { data: otpData, error: otpError } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email,
-      options: { redirectTo: `${appUrl}/auth/callback` },
+      options: { redirectTo: `${appUrl}/auth/callback?next=${encodeURIComponent(redirectPath)}` },
     })
 
     if (otpError) {
-      return errRedirect(origin, 'generateLink', `${otpError.message} | redirectTo=${appUrl}/auth/callback`)
+      return errRedirect(origin, 'generateLink', `${otpError.message} | redirectTo=${appUrl}/auth/callback?next=...`)
     }
     if (!otpData.properties?.action_link) {
       return errRedirect(origin, 'generateLink', 'action_link 없음')
