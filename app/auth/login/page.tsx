@@ -59,10 +59,15 @@ function LoginForm() {
     window.location.href = redirect
   }
 
+  const step = searchParams.get('step')
+  const detail = searchParams.get('detail')
+
   const errorMessage = errorParam === 'kakao_no_email'
     ? (hint || '카카오 계정에서 이메일 제공 동의가 필요합니다')
     : errorParam === 'naver_auth_failed' || errorParam === 'kakao_auth_failed'
-    ? '소셜 로그인에 실패했습니다. 다시 시도해주세요.'
+    ? `소셜 로그인에 실패했습니다.${step ? ` (단계: ${step})` : ''}`
+    : errorParam === 'no_code'
+    ? '인증 코드를 받지 못했습니다. 다시 시도해주세요.'
     : null
 
   return (
@@ -99,8 +104,13 @@ function LoginForm() {
 
           {/* Error message */}
           {errorMessage && (
-            <div style={{ marginBottom: '16px', padding: '10px 14px', background: 'var(--danger-subtle, rgba(239,68,68,0.08))', border: '1px solid var(--danger-border, rgba(239,68,68,0.2))', borderRadius: '10px', fontSize: '13px', color: 'var(--danger)', textAlign: 'center' }}>
-              {errorMessage}
+            <div style={{ marginBottom: '16px', padding: '10px 14px', background: 'var(--danger-subtle, rgba(239,68,68,0.08))', border: '1px solid var(--danger-border, rgba(239,68,68,0.2))', borderRadius: '10px', color: 'var(--danger)' }}>
+              <p style={{ fontSize: '13px', textAlign: 'center', margin: 0 }}>{errorMessage}</p>
+              {detail && (
+                <p style={{ fontSize: '11px', marginTop: '6px', fontFamily: 'monospace', wordBreak: 'break-all', opacity: 0.8, margin: '6px 0 0' }}>
+                  {detail}
+                </p>
+              )}
             </div>
           )}
 
