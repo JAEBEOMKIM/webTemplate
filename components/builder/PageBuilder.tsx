@@ -169,6 +169,8 @@ export function PageBuilder({ page, initialComponents }: Props) {
 
   // dnd-kit: 현재 드래그 중인 팔레트 아이템 타입
   const [activePaletteType, setActivePaletteType] = useState<string | null>(null)
+  // ▲/▼ 스왑 중에 onLayoutChange가 layout을 덮어쓰지 않도록 플래그
+  const swapInProgress = useRef(false)
 
   // Panel collapse states
   const [paletteCollapsed, setPaletteCollapsed] = useState(false)
@@ -392,8 +394,16 @@ export function PageBuilder({ page, initialComponents }: Props) {
       return { ...l }
     })
 
+    swapInProgress.current = true
     setLayout(newLayout)
     await saveLayout(newLayout)
+    // onLayoutChange가 react-grid-layout auto-compact로 덮어쓰지 않도록
+    // 다음 렌더 사이클까지 플래그 유지
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        swapInProgress.current = false
+      })
+    })
   }, [components, layout, saveLayout])
 
   return (
@@ -525,6 +535,8 @@ export function PageBuilder({ page, initialComponents }: Props) {
                   saveLayout(updatedLayout)
                 }}
                 onLayoutChange={newLayout => {
+                  // ▲/▼ 스왑 중에는 react-grid-layout auto-compact가 덮어쓰지 않도록 무시
+                  if (swapInProgress.current) return
                   setLayout(prev => {
                     const newIds = new Set(newLayout.map(l => l.i))
                     const preserved = prev.filter(l => !newIds.has(l.i))
