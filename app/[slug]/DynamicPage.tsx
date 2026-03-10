@@ -19,6 +19,7 @@ interface Props {
   requiresPassword?: boolean
   requiresInviteCode?: boolean
   user?: UserProfile
+  isAdmin?: boolean
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -189,7 +190,7 @@ const GRID_COLS = 10
 const GRID_ROW_HEIGHT = 60 // px
 const GRID_GAP = 8 // px
 
-function PageContent({ page, components, user }: { page: PageData; components: PageComponentData[]; user?: UserProfile }) {
+function PageContent({ page, components, user, isAdmin }: { page: PageData; components: PageComponentData[]; user?: UserProfile; isAdmin?: boolean }) {
   // 그리드 전체 높이 계산 (빈 공간 없이 딱 맞게)
   const gridRows = components.length > 0
     ? Math.max(...components.map(c => (c.grid_y ?? 0) + (c.grid_h ?? 6)))
@@ -266,6 +267,7 @@ function PageContent({ page, components, user }: { page: PageData; components: P
                     componentId={comp.id}
                     config={comp.config}
                     pageId={page.id}
+                    isAdmin={isAdmin}
                   />
                 </div>
               )
@@ -277,7 +279,7 @@ function PageContent({ page, components, user }: { page: PageData; components: P
   )
 }
 
-export function DynamicPage({ page, components, requiresPassword, requiresInviteCode, user }: Props) {
+export function DynamicPage({ page, components, requiresPassword, requiresInviteCode, user, isAdmin }: Props) {
   const [unlocked, setUnlocked] = useState(false)
 
   useEffect(() => {
@@ -291,7 +293,7 @@ export function DynamicPage({ page, components, requiresPassword, requiresInvite
   const content = (() => {
     if (requiresPassword && !unlocked) return <PasswordGate page={page} onUnlock={() => setUnlocked(true)} />
     if (requiresInviteCode && !unlocked && user) return <InviteCodeGate page={page} user={user} onUnlock={() => setUnlocked(true)} />
-    return <PageContent page={page} components={components} user={user} />
+    return <PageContent page={page} components={components} user={user} isAdmin={isAdmin} />
   })()
 
   return themeClass

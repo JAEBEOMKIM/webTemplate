@@ -28,20 +28,23 @@ export default async function SlugPage({ params }: Props) {
     .eq('page_id', page.id)
     .order('display_order')
 
+  // 로그인 유저 확인 — 관리자 여부 판단에 사용
+  const { data: { user } } = await supabase.auth.getUser()
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || ''
+  const isAdmin = !!(user && adminEmail && user.email === adminEmail)
+
   // 접근 권한 체크
   const tracker = <PageViewTracker pageId={page.id} />
 
   if (page.access_type === 'public') {
-    return <>{tracker}<DynamicPage page={page} components={components || []} /></>
+    return <>{tracker}<DynamicPage page={page} components={components || []} isAdmin={isAdmin} /></>
   }
 
   if (page.access_type === 'password') {
-    return <>{tracker}<DynamicPage page={page} components={components || []} requiresPassword /></>
+    return <>{tracker}<DynamicPage page={page} components={components || []} requiresPassword isAdmin={isAdmin} /></>
   }
 
   if (page.access_type === 'oauth') {
-    const { data: { user } } = await supabase.auth.getUser()
-
     if (!user) {
       redirect(`/auth/login?redirect=/${slug}`)
     }
@@ -65,10 +68,10 @@ export default async function SlugPage({ params }: Props) {
       .single()
 
     if (!grant) {
-      return <>{tracker}<DynamicPage page={page} components={components || []} requiresInviteCode user={userProfile} /></>
+      return <>{tracker}<DynamicPage page={page} components={components || []} requiresInviteCode user={userProfile} isAdmin={isAdmin} /></>
     }
 
-    return <>{tracker}<DynamicPage page={page} components={components || []} user={userProfile} /></>
+    return <>{tracker}<DynamicPage page={page} components={components || []} user={userProfile} isAdmin={isAdmin} /></>
   }
 
   notFound()
