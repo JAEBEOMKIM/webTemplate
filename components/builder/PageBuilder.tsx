@@ -76,6 +76,11 @@ export function PageBuilder({ page, initialComponents }: Props) {
   const draggingTypeRef = useRef<string | null>(null)
   const [containerWidth, setContainerWidth] = useState(800)
   const [dropError, setDropError] = useState<string | null>(null)
+  // 터치 디바이스 감지 (SSR-safe)
+  const [isTouchDevice, setIsTouchDevice] = useState(false)
+  useEffect(() => {
+    setIsTouchDevice(window.matchMedia('(hover: none) and (pointer: coarse)').matches)
+  }, [])
 
   // Panel collapse states
   const [paletteCollapsed, setPaletteCollapsed] = useState(false)
@@ -304,7 +309,9 @@ export function PageBuilder({ page, initialComponents }: Props) {
           <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>컴포넌트</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>드래그해서 추가</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                {isTouchDevice ? '탭하여 추가' : '드래그해서 추가'}
+              </div>
             </div>
             <button
               onClick={() => setPaletteCollapsed(true)}
@@ -315,26 +322,34 @@ export function PageBuilder({ page, initialComponents }: Props) {
           <div style={{ padding: '8px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {Array.from(componentRegistry.values()).map(def => {
               const size = GRID_SIZES[def.id]
+              const handleTapAdd = () => {
+                const gridY = components.length > 0
+                  ? Math.max(...layout.map(l => l.y + l.h))
+                  : 0
+                addComponentToCanvas(def.id, 0, gridY)
+              }
               return (
                 <div
                   key={def.id}
-                  draggable
-                  onDragStart={e => {
+                  // 터치: 탭으로 추가 / 데스크톱: 드래그로 추가
+                  draggable={!isTouchDevice}
+                  onClick={isTouchDevice ? handleTapAdd : undefined}
+                  onDragStart={!isTouchDevice ? (e => {
                     draggingTypeRef.current = def.id
                     setDraggingType(def.id)
                     e.dataTransfer.setData('text/plain', def.id)
                     e.dataTransfer.effectAllowed = 'copy'
-                  }}
-                  onDragEnd={() => {
+                  }) : undefined}
+                  onDragEnd={!isTouchDevice ? (() => {
                     draggingTypeRef.current = null
                     setDraggingType(null)
-                  }}
+                  }) : undefined}
                   style={{
                     padding: '10px 12px',
                     borderRadius: '10px',
                     border: '1.5px dashed var(--border)',
                     background: 'transparent',
-                    cursor: 'grab',
+                    cursor: isTouchDevice ? 'pointer' : 'grab',
                     userSelect: 'none',
                   }}
                   className="palette-item"
@@ -344,6 +359,11 @@ export function PageBuilder({ page, initialComponents }: Props) {
                   <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                     기본 {size?.w ?? '?'}×{size?.h ?? '?'}
                   </div>
+                  {isTouchDevice && (
+                    <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: 700, color: 'var(--accent)' }}>
+                      + 탭하여 추가
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -408,8 +428,17 @@ export function PageBuilder({ page, initialComponents }: Props) {
               textAlign: 'center', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 0,
             }}>
               <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>🧩</div>
-              <p style={{ fontSize: '14px', fontWeight: 600 }}>왼쪽 패널에서 컴포넌트를</p>
-              <p style={{ fontSize: '13px' }}>드래그해서 캔버스에 놓으세요</p>
+              {isTouchDevice ? (
+                <>
+                  <p style={{ fontSize: '14px', fontWeight: 600 }}>왼쪽 패널에서 컴포넌트를</p>
+                  <p style={{ fontSize: '13px' }}>탭하여 추가하세요</p>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: '14px', fontWeight: 600 }}>왼쪽 패널에서 컴포넌트를</p>
+                  <p style={{ fontSize: '13px' }}>드래그해서 캔버스에 놓으세요</p>
+                </>
+              )}
             </div>
           )}
 
