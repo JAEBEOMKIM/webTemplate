@@ -1,10 +1,18 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { componentRegistry } from '@/components/registry'
-import type { PageData, PageComponentData } from '@/components/registry/types'
+import { componentRegistry, buildResolvedRegistry } from '@/components/registry'
+import type {
+  PageData,
+  PageComponentData,
+  ComponentDefinitionRow,
+  ComponentGroupRow,
+  ComponentGroupNode,
+  ResolvedComponentDefinition,
+} from '@/components/registry/types'
+import { buildGroupTree, countGroupComponents } from '@/lib/components/group-utils'
 import { ThemeSelector } from '@/components/ui/ThemeSelector'
 import { GridLayout } from 'react-grid-layout'
 import type { Layout, LayoutItem } from 'react-grid-layout'
@@ -28,16 +36,11 @@ const COLS = 10
 const ROW_HEIGHT = 60
 const MAX_ROWS = 20
 
-const GRID_SIZES: Record<string, { w: number; h: number; minW: number; minH: number }> = {
-  board: { w: 10, h: 6, minW: 4, minH: 3 },
-  calendar: { w: 10, h: 8, minW: 6, minH: 6 },
-  survey: { w: 6, h: 7, minW: 4, minH: 4 },
-  'image-gallery': { w: 5, h: 5, minW: 3, minH: 3 },
-}
-
 interface Props {
   page: PageData
   initialComponents: PageComponentData[]
+  componentDefs: ComponentDefinitionRow[]
+  componentGroups: ComponentGroupRow[]
 }
 
 function PanelToggle({ label, collapsed, onClick }: { label: string; collapsed: boolean; onClick: () => void }) {
@@ -64,6 +67,43 @@ function PanelToggle({ label, collapsed, onClick }: { label: string; collapsed: 
       <span style={{ fontSize: '10px', transform: collapsed ? 'rotate(90deg)' : undefined }}>{collapsed ? '▶' : '◀'}</span>
       {collapsed && <span>{label}</span>}
     </button>
+  )
+}
+
+// ── 팔레트 그룹 (재귀적 트리 렌더링) ───────────────────────────────────────
+function PaletteGroup({ group, depth = 0 }: { group: ComponentGroupNode; depth?: number }) {
+  const [expanded, setExpanded] = useState(true)
+  const count = countGroupComponents(group)
+  if (count === 0) return null
+
+  return (
+    <div style={{ marginLeft: depth * 6 }}>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '5px', width: '100%',
+          padding: '6px 8px', background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)',
+          borderRadius: '6px', textAlign: 'left',
+        }}
+        className="palette-group-btn"
+      >
+        <span style={{ fontSize: '8px', opacity: 0.6, transition: 'transform 0.15s', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+        <span>{group.icon}</span>
+        <span style={{ flex: 1 }}>{group.name}</span>
+        <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400 }}>{count}</span>
+      </button>
+      {expanded && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
+          {group.components.map(def => (
+            <PaletteItem key={def.id} def={def} size={{ w: def.gridW, h: def.gridH }} />
+          ))}
+          {group.children.map(child => (
+            <PaletteGroup key={child.id} group={child} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -109,8 +149,8 @@ function PaletteItem({
 }
 
 // ── DragOverlay 내부에서 렌더되는 드래그 ghost ────────────────────────────
-function PaletteDragGhost({ componentType }: { componentType: string }) {
-  const def = componentRegistry.get(componentType)
+function PaletteDragGhost({ componentType, resolvedRegistry }: { componentType: string; resolvedRegistry: Map<string, ResolvedComponentDefinition> }) {
+  const def = resolvedRegistry.get(componentType) ?? componentRegistry.get(componentType)
   if (!def) return null
   return (
     <div style={{
@@ -146,10 +186,18 @@ function CanvasDropZone({ children, style }: { children: React.ReactNode; style?
   )
 }
 
-export function PageBuilder({ page, initialComponents }: Props) {
+export function PageBuilder({ page, initialComponents, componentDefs, componentGroups }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // DB 행 + 코드 구현체 병합 → 렌더 가능한 컴포넌트만
+  const resolvedRegistry = useMemo(() => buildResolvedRegistry(componentDefs), [componentDefs])
+  // 그룹 트리 구축
+  const groupTree = useMemo(
+    () => buildGroupTree(componentGroups, Array.from(resolvedRegistry.values())),
+    [componentGroups, resolvedRegistry]
+  )
 
   const [components, setComponents] = useState<PageComponentData[]>(initialComponents)
   const [layout, setLayout] = useState<LayoutItem[]>(
@@ -235,7 +283,9 @@ export function PageBuilder({ page, initialComponents }: Props) {
   }, [configWidth])
 
   const selectedComponent = components.find(c => c.id === selectedId) ?? null
-  const selectedDef = selectedComponent ? componentRegistry.get(selectedComponent.component_type) : null
+  const selectedDef = selectedComponent
+    ? (resolvedRegistry.get(selectedComponent.component_type) ?? componentRegistry.get(selectedComponent.component_type) ?? null)
+    : null
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -263,10 +313,14 @@ export function PageBuilder({ page, initialComponents }: Props) {
   }, [supabase])
 
   const addComponentToCanvas = useCallback((type: string, gridX: number, gridY: number) => {
-    const def = componentRegistry.get(type)
+    // DB 기반 resolved registry에서 먼저 조회, 없으면 레거시 registry
+    const resolved = resolvedRegistry.get(type)
+    const legacyDef = componentRegistry.get(type)
+    const def = resolved ?? legacyDef
     if (!def) return
 
-    const sizes = GRID_SIZES[type] ?? { w: 5, h: 4, minW: 3, minH: 3 }
+    const w = resolved?.gridW ?? 5
+    const h = resolved?.gridH ?? 4
     const newId = crypto.randomUUID()
     const displayOrder = components.length
 
@@ -278,12 +332,12 @@ export function PageBuilder({ page, initialComponents }: Props) {
       config: def.defaultConfig,
       grid_x: gridX,
       grid_y: gridY,
-      grid_w: sizes.w,
-      grid_h: sizes.h,
+      grid_w: w,
+      grid_h: h,
     }
 
     setComponents(prev => [...prev, newComp])
-    setLayout(prev => [...prev, { i: newId, x: gridX, y: gridY, w: sizes.w, h: sizes.h }])
+    setLayout(prev => [...prev, { i: newId, x: gridX, y: gridY, w, h }])
     setSelectedId(newId)
     setDropError(null)
 
@@ -297,8 +351,8 @@ export function PageBuilder({ page, initialComponents }: Props) {
         config: def.defaultConfig,
         grid_x: gridX,
         grid_y: gridY,
-        grid_w: sizes.w,
-        grid_h: sizes.h,
+        grid_w: w,
+        grid_h: h,
       })
       .then(({ error }) => {
         if (error) {
@@ -309,7 +363,7 @@ export function PageBuilder({ page, initialComponents }: Props) {
           setSelectedId(null)
         }
       })
-  }, [supabase, page.id, components.length])
+  }, [supabase, page.id, components.length, resolvedRegistry])
 
   // dnd-kit: 드래그 시작
   const handleDragStart = (event: DragStartEvent) => {
@@ -434,13 +488,9 @@ export function PageBuilder({ page, initialComponents }: Props) {
                 title="패널 접기"
               >◀</button>
             </div>
-            <div style={{ padding: '8px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {Array.from(componentRegistry.values()).map(def => (
-                <PaletteItem
-                  key={def.id}
-                  def={def}
-                  size={GRID_SIZES[def.id]}
-                />
+            <div style={{ padding: '8px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {groupTree.map(group => (
+                <PaletteGroup key={group.id} group={group} />
               ))}
             </div>
           </div>
@@ -524,7 +574,7 @@ export function PageBuilder({ page, initialComponents }: Props) {
                 dropConfig={{
                   enabled: true,
                   defaultItem: activePaletteType
-                    ? { w: GRID_SIZES[activePaletteType]?.w ?? 5, h: GRID_SIZES[activePaletteType]?.h ?? 4 }
+                    ? { w: resolvedRegistry.get(activePaletteType)?.gridW ?? 5, h: resolvedRegistry.get(activePaletteType)?.gridH ?? 4 }
                     : { w: 5, h: 4 },
                 }}
                 onDrop={handleDrop}
@@ -558,7 +608,8 @@ export function PageBuilder({ page, initialComponents }: Props) {
                   const sortedIndexMap = new Map(sortedIds.map((id, i) => [id, i]))
 
                   return components.map(comp => {
-                    const def = componentRegistry.get(comp.component_type)
+                    const resolved = resolvedRegistry.get(comp.component_type)
+                    const def = resolved ?? componentRegistry.get(comp.component_type)
                     const isSelected = selectedId === comp.id
                     const layoutItem = layout.find(l => l.i === comp.id)
                     const sortedIdx = sortedIndexMap.get(comp.id) ?? 0
@@ -728,6 +779,9 @@ export function PageBuilder({ page, initialComponents }: Props) {
             border-color: var(--accent) !important;
             background: var(--accent-subtle) !important;
           }
+          .palette-group-btn:hover {
+            background: var(--bg-secondary) !important;
+          }
           .react-grid-item.react-grid-placeholder {
             background: var(--accent) !important;
             opacity: 0.15 !important;
@@ -748,7 +802,7 @@ export function PageBuilder({ page, initialComponents }: Props) {
 
       {/* DragOverlay: 드래그 중 마우스/터치 포인터를 따라다니는 ghost */}
       <DragOverlay dropAnimation={null}>
-        {activePaletteType ? <PaletteDragGhost componentType={activePaletteType} /> : null}
+        {activePaletteType ? <PaletteDragGhost componentType={activePaletteType} resolvedRegistry={resolvedRegistry} /> : null}
       </DragOverlay>
     </DndContext>
   )

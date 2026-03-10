@@ -10,8 +10,63 @@ import { MarkdownComponent, MarkdownConfigForm } from './markdown/MarkdownCompon
 import { ShareComponent, ShareConfigForm } from './share/ShareComponent'
 import { TimetableComponent, TimetableConfigForm } from './timetable/TimetableComponent'
 import { KakaoMapComponent, KakaoMapConfigForm } from './kakaomap/KakaoMapComponent'
-import type { ComponentDefinition } from './types'
+import type {
+  ComponentDefinition,
+  ComponentImpl,
+  ComponentDefinitionRow,
+  ResolvedComponentDefinition,
+} from './types'
 
+// ── 코드 측 구현체 Map (module key → { Component, ConfigForm }) ──────────
+// 개발자가 새 컴포넌트를 추가하면 여기에 등록해야 함
+export const componentImplementations = new Map<string, ComponentImpl>([
+  ['accordion', { Component: AccordionComponent, ConfigForm: AccordionConfigForm }],
+  ['bento-gallery', { Component: BentoGalleryComponent, ConfigForm: BentoGalleryConfigForm }],
+  ['donut-chart', { Component: DonutChartComponent, ConfigForm: DonutChartConfigForm }],
+  ['board', { Component: BoardComponent, ConfigForm: BoardConfigForm }],
+  ['calendar', { Component: CalendarComponent, ConfigForm: CalendarConfigForm }],
+  ['survey', { Component: SurveyComponent, ConfigForm: SurveyConfigForm }],
+  ['image-gallery', { Component: ImageGalleryComponent, ConfigForm: ImageGalleryConfigForm }],
+  ['html', { Component: HtmlComponent, ConfigForm: HtmlConfigForm }],
+  ['markdown', { Component: MarkdownComponent, ConfigForm: MarkdownConfigForm }],
+  ['share', { Component: ShareComponent, ConfigForm: ShareConfigForm }],
+  ['timetable', { Component: TimetableComponent, ConfigForm: TimetableConfigForm }],
+  ['kakaomap', { Component: KakaoMapComponent, ConfigForm: KakaoMapConfigForm }],
+])
+
+// ── DB 행 + 코드 구현체 병합 → 렌더 가능한 컴포넌트만 반환 ──────────────
+export function buildResolvedRegistry(
+  dbDefs: ComponentDefinitionRow[]
+): Map<string, ResolvedComponentDefinition> {
+  const result = new Map<string, ResolvedComponentDefinition>()
+  for (const row of dbDefs) {
+    if (!row.is_active) continue
+    const moduleKey = row.component_module ?? row.id
+    const impl = componentImplementations.get(moduleKey)
+    if (!impl) continue // 코드 구현체 없음 → 렌더 불가 → 건너뜀
+    result.set(row.id, {
+      id: row.id,
+      name: row.name,
+      description: row.description ?? '',
+      icon: row.icon ?? '🧩',
+      defaultConfig: row.default_config,
+      Component: impl.Component,
+      ConfigForm: impl.ConfigForm,
+      groupId: row.group_id,
+      gridW: row.grid_w,
+      gridH: row.grid_h,
+      gridMinW: row.grid_min_w,
+      gridMinH: row.grid_min_h,
+      displayOrder: row.display_order,
+      isActive: row.is_active,
+    })
+  }
+  return result
+}
+
+// ── 레거시 호환용 componentRegistry ──────────────────────────────────────
+// DynamicPage.tsx 등 기존 코드에서 DB 없이도 동작하도록 유지
+// 새 코드는 buildResolvedRegistry()를 사용할 것
 export const componentRegistry = new Map<string, ComponentDefinition>([
   [
     'accordion',
@@ -90,126 +145,16 @@ export const componentRegistry = new Map<string, ComponentDefinition>([
       ConfigForm: DonutChartConfigForm,
     },
   ],
-  [
-    'board',
-    {
-      id: 'board',
-      name: '게시판',
-      description: '글 작성, 수정, 삭제 기능이 있는 게시판',
-      icon: '📋',
-      defaultConfig: { title: '게시판', allow_anonymous: false },
-      Component: BoardComponent,
-      ConfigForm: BoardConfigForm,
-    },
-  ],
-  [
-    'calendar',
-    {
-      id: 'calendar',
-      name: '달력/스케줄',
-      description: '일정 등록 및 관리 기능이 있는 캘린더',
-      icon: '📅',
-      defaultConfig: { title: '일정', allow_user_add: true },
-      Component: CalendarComponent,
-      ConfigForm: CalendarConfigForm,
-    },
-  ],
-  [
-    'survey',
-    {
-      id: 'survey',
-      name: '설문조사',
-      description: '다양한 방식의 설문조사 컴포넌트',
-      icon: '📊',
-      defaultConfig: { title: '설문조사', questions: [], allow_multiple: false },
-      Component: SurveyComponent,
-      ConfigForm: SurveyConfigForm,
-    },
-  ],
-  [
-    'image-gallery',
-    {
-      id: 'image-gallery',
-      name: '이미지 갤러리',
-      description: '연속 이미지 슬라이드쇼 및 갤러리',
-      icon: '🖼️',
-      defaultConfig: { title: '갤러리', images: [], autoplay: true, interval: 3000 },
-      Component: ImageGalleryComponent,
-      ConfigForm: ImageGalleryConfigForm,
-    },
-  ],
-  [
-    'html',
-    {
-      id: 'html',
-      name: 'HTML',
-      description: '직접 작성한 HTML을 그대로 표시',
-      icon: '🖥️',
-      defaultConfig: { html: '' },
-      Component: HtmlComponent,
-      ConfigForm: HtmlConfigForm,
-    },
-  ],
-  [
-    'markdown',
-    {
-      id: 'markdown',
-      name: '마크다운',
-      description: '마크다운 형식으로 텍스트 콘텐츠 작성',
-      icon: '📝',
-      defaultConfig: { content: '' },
-      Component: MarkdownComponent,
-      ConfigForm: MarkdownConfigForm,
-    },
-  ],
-  [
-    'share',
-    {
-      id: 'share',
-      name: '공유하기',
-      description: '카카오톡, 문자, 링크 복사 공유 버튼',
-      icon: '🔗',
-      defaultConfig: { title: '공유하기', description: '', show_kakao: true, show_sms: true, show_copy: true, kakao_app_key: '' },
-      Component: ShareComponent,
-      ConfigForm: ShareConfigForm,
-    },
-  ],
-  [
-    'timetable',
-    {
-      id: 'timetable',
-      name: '하루 일정표',
-      description: '시간별 하루 일정을 시각적으로 표시',
-      icon: '🗓️',
-      defaultConfig: { title: '하루 일정', events: [], start_hour: 8, end_hour: 22, show_timeline: true, show_legend: true },
-      Component: TimetableComponent,
-      ConfigForm: TimetableConfigForm,
-    },
-  ],
-  [
-    'kakaomap',
-    {
-      id: 'kakaomap',
-      name: '카카오맵',
-      description: '카카오맵으로 위치와 마커를 표시',
-      icon: '🗺️',
-      defaultConfig: {
-        app_key: '',
-        center_lat: 37.5665,
-        center_lng: 126.9780,
-        zoom: 3,
-        map_type: 'ROADMAP',
-        markers: [],
-        show_controls: true,
-        height: 400,
-        use_current_location: false,
-        destination_link: '',
-        map_title: '',
-      },
-      Component: KakaoMapComponent,
-      ConfigForm: KakaoMapConfigForm,
-    },
-  ],
+  ['board', { id: 'board', name: '게시판', description: '글 작성, 수정, 삭제 기능이 있는 게시판', icon: '📋', defaultConfig: { title: '게시판', allow_anonymous: false }, Component: BoardComponent, ConfigForm: BoardConfigForm }],
+  ['calendar', { id: 'calendar', name: '달력/스케줄', description: '일정 등록 및 관리 기능이 있는 캘린더', icon: '📅', defaultConfig: { title: '일정', allow_user_add: true }, Component: CalendarComponent, ConfigForm: CalendarConfigForm }],
+  ['survey', { id: 'survey', name: '설문조사', description: '다양한 방식의 설문조사 컴포넌트', icon: '📊', defaultConfig: { title: '설문조사', questions: [], allow_multiple: false }, Component: SurveyComponent, ConfigForm: SurveyConfigForm }],
+  ['image-gallery', { id: 'image-gallery', name: '이미지 갤러리', description: '연속 이미지 슬라이드쇼 및 갤러리', icon: '🖼️', defaultConfig: { title: '갤러리', images: [], autoplay: true, interval: 3000 }, Component: ImageGalleryComponent, ConfigForm: ImageGalleryConfigForm }],
+  ['html', { id: 'html', name: 'HTML', description: '직접 작성한 HTML을 그대로 표시', icon: '🖥️', defaultConfig: { html: '' }, Component: HtmlComponent, ConfigForm: HtmlConfigForm }],
+  ['markdown', { id: 'markdown', name: '마크다운', description: '마크다운 형식으로 텍스트 콘텐츠 작성', icon: '📝', defaultConfig: { content: '' }, Component: MarkdownComponent, ConfigForm: MarkdownConfigForm }],
+  ['share', { id: 'share', name: '공유하기', description: '카카오톡, 문자, 링크 복사 공유 버튼', icon: '🔗', defaultConfig: { title: '공유하기', description: '', show_kakao: true, show_sms: true, show_copy: true, kakao_app_key: '' }, Component: ShareComponent, ConfigForm: ShareConfigForm }],
+  ['timetable', { id: 'timetable', name: '하루 일정표', description: '시간별 하루 일정을 시각적으로 표시', icon: '🗓️', defaultConfig: { title: '하루 일정', events: [], start_hour: 8, end_hour: 22, show_timeline: true, show_legend: true }, Component: TimetableComponent, ConfigForm: TimetableConfigForm }],
+  ['kakaomap', { id: 'kakaomap', name: '카카오맵', description: '카카오맵으로 위치와 마커를 표시', icon: '🗺️', defaultConfig: { app_key: '', center_lat: 37.5665, center_lng: 126.9780, zoom: 3, map_type: 'ROADMAP', markers: [], show_controls: true, height: 400, use_current_location: false, destination_link: '', map_title: '' }, Component: KakaoMapComponent, ConfigForm: KakaoMapConfigForm }],
 ])
 
 export type { ComponentDefinition, ComponentProps, PageData, PageComponentData } from './types'
+export type { ComponentImpl, ComponentDefinitionRow, ComponentGroupRow, ResolvedComponentDefinition, ComponentGroupNode } from './types'
