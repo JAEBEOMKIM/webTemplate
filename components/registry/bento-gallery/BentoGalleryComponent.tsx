@@ -18,6 +18,33 @@ interface MediaItem {
   sourceType?: 'url' | 'upload'
 }
 
+/* ─── YouTube URL 감지 및 embed URL 변환 ─── */
+
+function getYouTubeEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url)
+    let videoId: string | null = null
+
+    if (u.hostname === 'youtu.be') {
+      videoId = u.pathname.slice(1).split('?')[0]
+    } else if (u.hostname.includes('youtube.com')) {
+      if (u.pathname.startsWith('/watch')) {
+        videoId = u.searchParams.get('v')
+      } else if (u.pathname.startsWith('/embed/')) {
+        videoId = u.pathname.split('/embed/')[1].split('?')[0]
+      } else if (u.pathname.startsWith('/shorts/')) {
+        videoId = u.pathname.split('/shorts/')[1].split('?')[0]
+      }
+    }
+
+    if (!videoId) return null
+    // loop=1 은 playlist=videoId 없이는 동작 안 함 (YouTube 정책)
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&playsinline=1`
+  } catch {
+    return null
+  }
+}
+
 /* ─── Span presets ─── */
 
 const SPAN_PRESETS = [
@@ -73,6 +100,23 @@ function MediaItemView({ item, className, onClick }: { item: MediaItem; classNam
   }, [isInView])
 
   if (item.type === 'video') {
+    const youtubeEmbedUrl = getYouTubeEmbedUrl(item.url)
+
+    if (youtubeEmbedUrl) {
+      return (
+        <div className={`${className ?? ''} relative overflow-hidden`} onClick={onClick}>
+          <iframe
+            src={youtubeEmbedUrl}
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            title={item.title}
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+          />
+        </div>
+      )
+    }
+
+    // 일반 mp4 URL
     return (
       <div className={`${className ?? ''} relative overflow-hidden`}>
         <video
@@ -490,8 +534,15 @@ export function BentoGalleryConfigForm({ config, onChange }: ConfigFormProps) {
                     {/* Video always uses URL */}
                     {item.type === 'video' && (
                       <div>
-                        <label style={labelStyle}>영상 URL (mp4 링크)</label>
-                        <input className="input" value={item.url} onChange={e => update(idx, { url: e.target.value })} placeholder="https://.../video.mp4" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                          <label style={{ ...labelStyle, marginBottom: 0 }}>영상 URL</label>
+                          {getYouTubeEmbedUrl(item.url) && (
+                            <span style={{ fontSize: '10px', fontWeight: 600, color: '#ff0000', background: '#fff0f0', border: '1px solid #ffcccc', borderRadius: '4px', padding: '1px 6px' }}>
+                              ▶ YouTube
+                            </span>
+                          )}
+                        </div>
+                        <input className="input" value={item.url} onChange={e => update(idx, { url: e.target.value })} placeholder="mp4 URL 또는 YouTube 링크" style={{ fontSize: '11px', fontFamily: 'monospace' }} />
                       </div>
                     )}
 
