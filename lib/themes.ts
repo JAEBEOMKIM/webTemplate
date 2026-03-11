@@ -92,6 +92,46 @@ export const themes: ThemeDefinition[] = [
     preview:     { bg: '#fff5f7', accent: '#e11d48', text: '#4c0519', card: '#ffe4e9' },
     previewDark: { bg: '#1a0a10', accent: '#fb7185', text: '#ffe4e9', card: '#2a1018' },
   },
+  {
+    id: 'bubblegum',
+    name: '버블검',
+    description: '달콤한 핑크 & 민트, 귀엽고 생기넘치는 팝 스타일',
+    fontLabel: 'Poppins',
+    preview:     { bg: '#f6e6ee', accent: '#d04f99', text: '#5b5b5b', card: '#fdedc9' },
+    previewDark: { bg: '#12242e', accent: '#fbe2a7', text: '#f3e3ea', card: '#1c2e38' },
+  },
+  {
+    id: 'candyland',
+    name: '캔디랜드',
+    description: '파스텔 핑크 & 하늘색, 달콤하고 몽환적인 판타지',
+    fontLabel: 'Poppins',
+    preview:     { bg: '#f7f9fa', accent: '#ffc0cb', text: '#333333', card: '#ffffff' },
+    previewDark: { bg: '#1a1d23', accent: '#ff99cc', text: '#e5e5e5', card: '#2f3436' },
+  },
+  {
+    id: 'shadcn',
+    name: '순수',
+    description: '군더더기 없는 흑백 대비, shadcn 표준 스타일',
+    fontLabel: 'System',
+    preview:     { bg: '#ffffff', accent: '#171717', text: '#0a0a0a', card: '#ffffff' },
+    previewDark: { bg: '#0a0a0a', accent: '#fafafa', text: '#fafafa', card: '#121212' },
+  },
+  {
+    id: 'graphite',
+    name: '그라파이트',
+    description: '차분한 회색 계열, 세련되고 집중력을 높이는 스타일',
+    fontLabel: 'Inter',
+    preview:     { bg: '#f0f0f0', accent: '#606060', text: '#333333', card: '#f5f5f5' },
+    previewDark: { bg: '#1a1a1a', accent: '#a0a0a0', text: '#d9d9d9', card: '#202020' },
+  },
+  {
+    id: 'violet-bloom',
+    name: '바이올렛 블룸',
+    description: '생동감 있는 보라색 액센트, 현대적이고 창의적인',
+    fontLabel: 'Plus Jakarta Sans',
+    preview:     { bg: '#fdfdfd', accent: '#7033ff', text: '#000000', card: '#fdfdfd' },
+    previewDark: { bg: '#1a1b1e', accent: '#8c5cff', text: '#f0f0f0', card: '#222327' },
+  },
 ]
 
 export const themeMap = new Map(themes.map(t => [t.id, t]))
