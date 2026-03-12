@@ -99,7 +99,7 @@ function assignWeekSlots(events: CalendarEvent[], weekStart: Date): SlottedEvent
 const DAY_CELL_H = 34   // height of day-number row
 const EVENT_H = 18      // height of each event bar
 const EVENT_GAP = 2     // gap between bars
-const MAX_SLOTS = 3     // max visible event rows per week
+const MAX_REAL_SLOTS = 2  // real event bars per day (+ 1 "기타" row if needed)
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
 const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
 const COLOR_PRESETS = ['#3B82F6','#EF4444','#10B981','#F59E0B','#8B5CF6','#EC4899','#06B6D4','#F97316']
@@ -127,33 +127,41 @@ const WeekRow = memo(function WeekRow({
   // Derive slots — only recomputes when events or week changes
   const slotted = useMemo(() => assignWeekSlots(events, weekStart), [events, weekStart])
   const maxSlot = slotted.length > 0 ? Math.max(...slotted.map(s => s.slot)) : -1
-  const visibleSlots = Math.min(maxSlot + 1, MAX_SLOTS)
+  const realSlots = Math.min(maxSlot + 1, MAX_REAL_SLOTS)
 
-  // Count hidden events per day (slot >= MAX_SLOTS)
-  const hiddenByDay = useMemo(() => {
-    const map = new Map<string, number>()
+  // Per-day hidden event info: count + earliest start_date event (slot >= MAX_REAL_SLOTS)
+  const hiddenEventsByDay = useMemo(() => {
+    const map = new Map<string, { count: number; earliest: CalendarEvent }>()
     for (const s of slotted) {
-      if (s.slot >= MAX_SLOTS) {
+      if (s.slot >= MAX_REAL_SLOTS) {
         for (let c = s.startCol; c <= s.endCol; c++) {
           const ds = formatDateStr(weekDays[c])
-          map.set(ds, (map.get(ds) ?? 0) + 1)
+          const existing = map.get(ds)
+          if (!existing) {
+            map.set(ds, { count: 1, earliest: s.event })
+          } else {
+            existing.count++
+            if (s.event.start_date < existing.earliest.start_date) {
+              existing.earliest = s.event
+            }
+          }
         }
       }
     }
     return map
   }, [slotted, weekDays])
 
-  const eventsAreaH = visibleSlots * (EVENT_H + EVENT_GAP)
+  const hasHiddenBar = hiddenEventsByDay.size > 0
+  const eventsAreaH = (realSlots + (hasHiddenBar ? 1 : 0)) * (EVENT_H + EVENT_GAP)
 
   return (
-    <div style={{ position: 'relative', borderBottom: '1px solid var(--border)' }}>
-      {/* Day number cells */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', height: `${DAY_CELL_H}px` }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, borderBottom: '1px solid var(--border)', minHeight: DAY_CELL_H + eventsAreaH + 8 }}>
+      {/* Day number cells — flex:1 fills remaining space when row is taller than events */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', flex: 1, minHeight: `${DAY_CELL_H}px` }}>
         {weekDays.map((date, col) => {
           const dateStr = formatDateStr(date)
           const isToday = dateStr === today
           const isCurrentMonth = date.getMonth() === currentMonth
-          const hidden = hiddenByDay.get(dateStr) ?? 0
           const dayEvents = events.filter(e => {
             const endStr = e.end_date ?? e.start_date
             return e.start_date <= dateStr && endStr >= dateStr
@@ -188,21 +196,17 @@ const WeekRow = memo(function WeekRow({
               }}>
                 {date.getDate()}
               </div>
-              {hidden > 0 && (
-                <span style={{ fontSize: '9px', color: 'var(--text-muted)', marginLeft: '2px' }}>
-                  +{hidden}
-                </span>
-              )}
             </div>
           )
         })}
       </div>
 
       {/* Event bars layer */}
-      {visibleSlots > 0 && (
+      {(realSlots > 0 || hasHiddenBar) && (
         <div style={{ position: 'relative', height: `${eventsAreaH + 4}px` }}>
+          {/* Real event bars (slot 0 only) */}
           {slotted
-            .filter(s => s.slot < MAX_SLOTS)
+            .filter(s => s.slot < MAX_REAL_SLOTS)
             .map(({ event, slot, startCol, endCol, roundLeft, roundRight }) => {
               const colW = 100 / 7
               const left = startCol * colW
@@ -243,6 +247,37 @@ const WeekRow = memo(function WeekRow({
                 </div>
               )
             })}
+          {/* 기타 x개 bars — per-day, clicking opens earliest hidden event */}
+          {weekDays.map((date, col) => {
+            const ds = formatDateStr(date)
+            const hidden = hiddenEventsByDay.get(ds)
+            if (!hidden) return null
+            const colW = 100 / 7
+            const top = 2 + realSlots * (EVENT_H + EVENT_GAP)
+            return (
+              <div
+                key={`extra-${ds}`}
+                onClick={e => { e.stopPropagation(); onEventClick(hidden.earliest) }}
+                title={`기타 일정 ${hidden.count}개`}
+                style={{
+                  position: 'absolute',
+                  left: `calc(${col * colW}% + 2px)`,
+                  width: `calc(${colW}% - 4px)`,
+                  top: `${top}px`,
+                  height: `${EVENT_H}px`,
+                  background: 'var(--bg-tertiary, #f1f5f9)',
+                  border: '1px dashed var(--border)',
+                  borderRadius: '4px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', zIndex: 1, userSelect: 'none',
+                }}
+              >
+                <span style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: 700 }}>
+                  +{hidden.count}
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -304,16 +339,24 @@ function DayEventsModal({
 // ── Event Detail Modal (public: read-only view) ───────────────────────────
 function EventDetailModal({
   event,
+  allEvents,
   onClose,
   onBack,
+  onNavigate,
 }: {
   event: CalendarEvent
+  allEvents: CalendarEvent[]
   onClose: () => void
   onBack?: () => void
+  onNavigate: (event: CalendarEvent) => void
 }) {
   const dateLabel = event.end_date && event.end_date !== event.start_date
     ? `${event.start_date} ~ ${event.end_date}`
     : event.start_date
+
+  const idx = allEvents.findIndex(e => e.id === event.id)
+  const hasPrev = idx > 0
+  const hasNext = idx >= 0 && idx < allEvents.length - 1
 
   return (
     <div
@@ -363,6 +406,29 @@ function EventDetailModal({
             닫기
           </button>
         </div>
+
+        {/* Prev / Next navigation — sorted by start_date */}
+        {idx >= 0 && allEvents.length > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+            <button
+              disabled={!hasPrev}
+              onClick={() => hasPrev && onNavigate(allEvents[idx - 1])}
+              style={{ ...eventNavBtnStyle, opacity: hasPrev ? 1 : 0.3 }}
+            >
+              ← 이전
+            </button>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              {idx + 1} / {allEvents.length}
+            </span>
+            <button
+              disabled={!hasNext}
+              onClick={() => hasNext && onNavigate(allEvents[idx + 1])}
+              style={{ ...eventNavBtnStyle, opacity: hasNext ? 1 : 0.3 }}
+            >
+              다음 →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -373,17 +439,24 @@ function EventFormModal({
   initialDate,
   editEvent,
   componentId,
+  allEvents,
   onSave,
   onDelete,
   onClose,
+  onNavigate,
 }: {
   initialDate: string | null
   editEvent: CalendarEvent | null
   componentId: string
+  allEvents: CalendarEvent[]
   onSave: () => void
   onDelete: (id: string) => void
   onClose: () => void
+  onNavigate: (event: CalendarEvent) => void
 }) {
+  const idx = editEvent ? allEvents.findIndex(e => e.id === editEvent.id) : -1
+  const hasPrev = idx > 0
+  const hasNext = idx >= 0 && idx < allEvents.length - 1
   const supabase = createClient()
   const [form, setForm] = useState({
     title: editEvent?.title ?? '',
@@ -553,6 +626,31 @@ function EventFormModal({
             취소
           </button>
         </div>
+
+        {/* Prev / Next navigation — available when editing an existing event */}
+        {idx >= 0 && allEvents.length > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+            <button
+              type="button"
+              disabled={!hasPrev}
+              onClick={() => hasPrev && onNavigate(allEvents[idx - 1])}
+              style={{ ...eventNavBtnStyle, opacity: hasPrev ? 1 : 0.3 }}
+            >
+              ← 이전
+            </button>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              {idx + 1} / {allEvents.length}
+            </span>
+            <button
+              type="button"
+              disabled={!hasNext}
+              onClick={() => hasNext && onNavigate(allEvents[idx + 1])}
+              style={{ ...eventNavBtnStyle, opacity: hasNext ? 1 : 0.3 }}
+            >
+              다음 →
+            </button>
+          </div>
+        )}
       </form>
     </div>
   )
@@ -597,6 +695,12 @@ export function CalendarComponent({ componentId, config, isAdmin }: ComponentPro
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
   const today = useMemo(() => formatDateStr(new Date()), [])
+
+  // Sorted by start_date for prev/next navigation (js-index-maps: stable memo)
+  const sortedEvents = useMemo(
+    () => [...events].sort((a, b) => a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0),
+    [events]
+  )
 
   // Fetch events overlapping current month view
   const fetchEvents = useCallback(async () => {
@@ -677,6 +781,17 @@ export function CalendarComponent({ componentId, config, isAdmin }: ComponentPro
     fetchEvents()
   }, [supabase, fetchEvents])
 
+  // Navigation handlers for event detail / edit modals (rerender-functional-setstate)
+  const handleNavigateDetail = useCallback((event: CalendarEvent) => {
+    setDetailEvent(event)
+    setDetailFromDay(null)
+  }, [])
+
+  const handleNavigateAdmin = useCallback((event: CalendarEvent) => {
+    setEditEvent(event)
+    setFormDate(null)
+  }, [])
+
   const prevMonth = useCallback(() => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1)), [])
   const nextMonth = useCallback(() => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1)), [])
   const goToday = useCallback(() => {
@@ -710,11 +825,12 @@ export function CalendarComponent({ componentId, config, isAdmin }: ComponentPro
         ))}
       </div>
 
-      {/* Calendar grid */}
+      {/* Calendar grid — flex column so WeekRows share height equally */}
       <div style={{
         flex: 1, border: '1px solid var(--border)', borderTop: 'none',
         borderRadius: '0 0 10px 10px', overflow: 'hidden',
         background: 'var(--bg-primary)',
+        display: 'flex', flexDirection: 'column',
       }}>
         {calendarWeeks.map((week, wi) => (
           <WeekRow
@@ -756,6 +872,8 @@ export function CalendarComponent({ componentId, config, isAdmin }: ComponentPro
       {!isAdmin && detailEvent && (
         <EventDetailModal
           event={detailEvent}
+          allEvents={sortedEvents}
+          onNavigate={handleNavigateDetail}
           onClose={() => { setDetailEvent(null); setDetailFromDay(null) }}
           onBack={detailFromDay ? () => {
             const sourceDate = detailFromDay
@@ -770,19 +888,29 @@ export function CalendarComponent({ componentId, config, isAdmin }: ComponentPro
         />
       )}
 
-      {/* Admin: add / edit form */}
+      {/* Admin: add / edit form — key forces remount (fresh form state) on event navigation */}
       {isAdmin && showForm && (
         <EventFormModal
+          key={editEvent?.id ?? 'new'}
           initialDate={formDate}
           editEvent={editEvent}
           componentId={componentId}
+          allEvents={sortedEvents}
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => { setShowForm(false); setEditEvent(null) }}
+          onNavigate={handleNavigateAdmin}
         />
       )}
     </div>
   )
+}
+
+// Hoisted outside component — stable reference (rerender-memo-with-default-value)
+const eventNavBtnStyle: React.CSSProperties = {
+  padding: '6px 12px', background: 'var(--bg-secondary)',
+  border: 'none', borderRadius: '6px', cursor: 'pointer',
+  color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600,
 }
 
 const navBtnStyle: React.CSSProperties = {

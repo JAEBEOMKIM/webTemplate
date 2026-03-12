@@ -10,6 +10,7 @@ import { MarkdownComponent, MarkdownConfigForm } from './markdown/MarkdownCompon
 import { ShareComponent, ShareConfigForm } from './share/ShareComponent'
 import { TimetableComponent, TimetableConfigForm } from './timetable/TimetableComponent'
 import { KakaoMapComponent, KakaoMapConfigForm } from './kakaomap/KakaoMapComponent'
+import { BannerEditorComponent, BannerEditorConfigForm } from './banner-editor/BannerEditorComponent'
 import type {
   ComponentDefinition,
   ComponentImpl,
@@ -32,6 +33,7 @@ export const componentImplementations = new Map<string, ComponentImpl>([
   ['share', { Component: ShareComponent, ConfigForm: ShareConfigForm }],
   ['timetable', { Component: TimetableComponent, ConfigForm: TimetableConfigForm }],
   ['kakaomap', { Component: KakaoMapComponent, ConfigForm: KakaoMapConfigForm }],
+  ['banner-editor', { Component: BannerEditorComponent, ConfigForm: BannerEditorConfigForm }],
 ])
 
 // ── DB 행 + 코드 구현체 병합 → 렌더 가능한 컴포넌트만 반환 ──────────────
@@ -154,6 +156,7 @@ export const componentRegistry = new Map<string, ComponentDefinition>([
   ['share', { id: 'share', name: '공유하기', description: '카카오톡, 문자, 링크 복사 공유 버튼', icon: '🔗', defaultConfig: { title: '공유하기', description: '', show_kakao: true, show_sms: true, show_copy: true, kakao_app_key: '' }, Component: ShareComponent, ConfigForm: ShareConfigForm }],
   ['timetable', { id: 'timetable', name: '하루 일정표', description: '시간별 하루 일정을 시각적으로 표시', icon: '🗓️', defaultConfig: { title: '하루 일정', events: [], start_hour: 8, end_hour: 22, show_timeline: true, show_legend: true }, Component: TimetableComponent, ConfigForm: TimetableConfigForm }],
   ['kakaomap', { id: 'kakaomap', name: '카카오맵', description: '카카오맵으로 위치와 마커를 표시', icon: '🗺️', defaultConfig: { app_key: '', center_lat: 37.5665, center_lng: 126.9780, zoom: 3, map_type: 'ROADMAP', markers: [], show_controls: true, height: 400, use_current_location: false, destination_link: '', map_title: '' }, Component: KakaoMapComponent, ConfigForm: KakaoMapConfigForm }],
+  ['banner-editor', { id: 'banner-editor', name: '배너 에디터', description: '레이어 기반 배너 이미지 편집기', icon: '🎨', defaultConfig: { canvasWidth: 900, canvasHeight: 300, background: { type: 'color', color: '#1e293b', imageUrl: '' }, layers: [], fabricJson: '', exportedImageUrl: null }, Component: BannerEditorComponent, ConfigForm: BannerEditorConfigForm }],
 ])
 
 export type { ComponentDefinition, ComponentProps, PageData, PageComponentData } from './types'
