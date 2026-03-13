@@ -14,7 +14,7 @@ interface KakaoNamespace {
   maps: {
     load: (cb: () => void) => void
     LatLng: new (lat: number, lng: number) => KakaoLatLng
-    Map: new (el: HTMLElement, opts: { center: KakaoLatLng; level: number }) => KakaoMap
+    Map: new (el: HTMLElement, opts: { center: KakaoLatLng; level: number; draggable?: boolean; scrollwheel?: boolean; disableDoubleClickZoom?: boolean }) => KakaoMap
     Marker: new (opts: { position: KakaoLatLng; map?: KakaoMap; title?: string; image?: unknown }) => KakaoMarker
     MarkerImage: new (src: string, size: KakaoSize, opts?: { offset?: KakaoPoint }) => unknown
     Size: new (w: number, h: number) => KakaoSize
@@ -177,6 +177,7 @@ export function KakaoMapComponent({ config }: ComponentProps) {
   const useCurrentLoc     = (config.use_current_location as boolean) === true
   const destinationLink   = (config.destination_link   as string)  || ''
   const mapTitle          = (config.map_title          as string)  || ''
+  const isFixed           = (config.is_fixed           as boolean) === true
 
   const containerRef       = useRef<HTMLDivElement>(null)
   const mapRef             = useRef<KakaoMap | null>(null)
@@ -223,14 +224,20 @@ export function KakaoMapComponent({ config }: ComponentProps) {
     const initLng = dest?.lng ?? centerLng
     const center = new K.LatLng(initLat, initLng)
 
-    const map = new K.Map(containerRef.current, { center, level: zoom })
+    const map = new K.Map(containerRef.current, {
+      center,
+      level: zoom,
+      draggable: !isFixed,
+      scrollwheel: !isFixed,
+      disableDoubleClickZoom: isFixed,
+    })
     mapRef.current = map
     map.setMapTypeId(K.MapTypeId[mapType] ?? K.MapTypeId.ROADMAP)
 
     // 초기 중심 좌표 기록 — markers effect에서 중복 setCenter 방지
     centeredDestRef.current = `${initLat},${initLng}`
 
-    if (showCtrl) {
+    if (showCtrl && !isFixed) {
       map.addControl(new K.ZoomControl(), K.ControlPosition.RIGHT)
       map.addControl(new K.MapTypeControl(), K.ControlPosition.TOPRIGHT)
     }
@@ -471,6 +478,7 @@ export function KakaoMapConfigForm({ config, onChange }: ConfigFormProps) {
   const useCurrentLoc   = (config.use_current_location as boolean) === true
   const destinationLink = (config.destination_link   as string)  || ''
   const mapTitle        = (config.map_title          as string)  || ''
+  const isFixed         = (config.is_fixed           as boolean) === true
 
   const [addrInput, setAddrInput] = useState('')
   const [addrSearching, setAddrSearching] = useState(false)
@@ -680,6 +688,16 @@ export function KakaoMapConfigForm({ config, onChange }: ConfigFormProps) {
           style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }} />
         <label htmlFor="map-show-ctrl" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>
           줌/지도 종류 컨트롤 표시
+        </label>
+      </div>
+
+      {/* Map lock option */}
+      <div style={rowStyle}>
+        <input type="checkbox" id="map-is-fixed" checked={isFixed}
+          onChange={e => onChange({ ...config, is_fixed: e.target.checked })}
+          style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }} />
+        <label htmlFor="map-is-fixed" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>
+          지도 고정 (드래그/스크롤 비활성화)
         </label>
       </div>
 

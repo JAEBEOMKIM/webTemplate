@@ -167,6 +167,9 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
   const containerRef = useRef<HTMLDivElement>(null)
 
   const cfg = parseCfg(config)
+  // Vercel: advanced-use-latest — always-fresh ref so [] dep callbacks see latest config
+  const cfgRef = useRef(cfg)
+  cfgRef.current = cfg
   const [layers, setLayers] = useState<Layer[]>(cfg.layers)
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<'image' | 'text' | null>(null)
@@ -215,29 +218,29 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
 
   // ── Initialize canvas with saved state ────────────────────────────────────
   const handleCanvasReady = useCallback(async () => {
+    const cur = cfgRef.current  // always-fresh via ref (Vercel: advanced-use-latest)
     setCanvasReady(true)
-    if (cfg.fabricJson) {
-      await canvasRef.current?.loadJSON(cfg.fabricJson)
-      // Backward compat: if old fabricJson had canvas.backgroundImage (non-selectable),
-      // migrate it to a selectable layer object
-      const hasBgLayer = cfg.layers.some(l => l.type === 'image' && (l as ImageLayer).isBackground)
-      if (cfg.background.type === 'image' && cfg.background.imageUrl && !hasBgLayer) {
+    if (cur.fabricJson) {
+      await canvasRef.current?.loadJSON(cur.fabricJson)
+      // Backward compat: migrate old non-selectable backgroundImage to layer
+      const hasBgLayer = cur.layers.some(l => l.type === 'image' && (l as ImageLayer).isBackground)
+      if (cur.background.type === 'image' && cur.background.imageUrl && !hasBgLayer) {
         const id = uid()
         await canvasRef.current?.migrateBackgroundImage(id)
         const migratedLayer: ImageLayer = {
           id, type: 'image', name: '배경 이미지',
-          imageUrl: cfg.background.imageUrl, visible: true, opacity: 100, isBackground: true,
+          imageUrl: cur.background.imageUrl, visible: true, opacity: 100, isBackground: true,
         }
         setLayers(prev => [migratedLayer, ...prev.filter(l => !(l.type === 'image' && (l as ImageLayer).isBackground))])
       }
-    } else if (cfg.background.type === 'color') {
-      canvasRef.current?.setBackgroundColor(cfg.background.color)
-    } else if (cfg.background.imageUrl) {
-      const existingBg = cfg.layers.find(l => l.type === 'image' && (l as ImageLayer).isBackground)
+    } else if (cur.background.type === 'color') {
+      canvasRef.current?.setBackgroundColor(cur.background.color)
+    } else if (cur.background.imageUrl) {
+      const existingBg = cur.layers.find(l => l.type === 'image' && (l as ImageLayer).isBackground)
       const id = existingBg?.id ?? uid()
-      await canvasRef.current?.setBackgroundImageAsLayer(cfg.background.imageUrl, id)
+      await canvasRef.current?.setBackgroundImageAsLayer(cur.background.imageUrl, id)
     }
-  }, []) // eslint-disable-line
+  }, []) // cfgRef.current always reflects latest config — no deps needed
 
   // ── Sync canvas modifications back to config (debounced) ──────────────────
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -523,56 +526,62 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
       {/* ── Canvas viewport (scrollable + zoomable) ── */}
-      {/* Outer: ResizeObserver anchor + scrollable viewport.
-          Use CSS min/max-height (not JS-computed) to avoid SSR hydration mismatch. */}
-      <div
-        ref={containerRef}
-        suppressHydrationWarning
-        style={{
-          width: '100%',
-          minHeight: 160,
-          maxHeight: 520,
-          overflow: 'auto',
-          background: 'var(--bg-tertiary)',
-          borderRadius: 8,
-          border: '1px solid var(--border)',
-        }}
-      >
-        {/* Spacer: expands to scaled canvas size so scrollbars appear correctly.
-            suppressHydrationWarning: effectiveScale is browser-only (ResizeObserver). */}
+      {/* Keyed fragment: remounts EditorCanvas + CanvasInitTrigger when canvas dimensions
+          change so Fabric.js reinitializes at the correct size (Vercel: rerender-memo). */}
+      <React.Fragment key={`canvas-${cfg.canvasWidth}x${cfg.canvasHeight}`}>
+        {/* Outer: ResizeObserver anchor + scrollable viewport.
+            Use CSS min/max-height (not JS-computed) to avoid SSR hydration mismatch. */}
         <div
+          ref={containerRef}
           suppressHydrationWarning
           style={{
-            width: cfg.canvasWidth * effectiveScale,
-            height: cfg.canvasHeight * effectiveScale,
-            position: 'relative',
-            minWidth: '100%',
+            width: '100%',
+            minHeight: 160,
+            maxHeight: 520,
+            overflow: 'auto',
+            background: 'var(--bg-tertiary)',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
           }}
         >
-          {/* Canvas holder: CSS-scaled, always at native pixel size.
-              CSS transform on wrapper div (not <canvas>) → Fabric.js pointer events unaffected. */}
+          {/* Spacer: expands to scaled canvas size so scrollbars appear correctly.
+              suppressHydrationWarning: effectiveScale is browser-only (ResizeObserver). */}
           <div
             suppressHydrationWarning
             style={{
-              width: cfg.canvasWidth,
-              height: cfg.canvasHeight,
-              transform: `scale(${effectiveScale})`,
-              transformOrigin: 'top left',
-              position: 'absolute',
-              top: 0,
-              left: 0,
+              width: cfg.canvasWidth * effectiveScale,
+              height: cfg.canvasHeight * effectiveScale,
+              position: 'relative',
+              minWidth: '100%',
             }}
           >
-            <EditorCanvas
-              ref={canvasRef}
-              width={cfg.canvasWidth}
-              height={cfg.canvasHeight}
-              onSelect={handleSelect}
-              onModified={handleModified}
-            />
+            {/* Canvas holder: CSS-scaled, always at native pixel size.
+                CSS transform on wrapper div (not <canvas>) → Fabric.js pointer events unaffected. */}
+            <div
+              suppressHydrationWarning
+              style={{
+                width: cfg.canvasWidth,
+                height: cfg.canvasHeight,
+                transform: `scale(${effectiveScale})`,
+                transformOrigin: 'top left',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+              }}
+            >
+              <EditorCanvas
+                ref={canvasRef}
+                width={cfg.canvasWidth}
+                height={cfg.canvasHeight}
+                onSelect={handleSelect}
+                onModified={handleModified}
+              />
+            </div>
           </div>
         </div>
-      </div>
+        {/* Canvas init trigger — inside keyed fragment so it refires on size change */}
+        <CanvasInitTrigger canvasRef={canvasRef} onReady={handleCanvasReady} />
+      </React.Fragment>
 
       {/* ── Zoom controls ── */}
       <ZoomControls
@@ -581,9 +590,6 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
         zoomLevel={zoomLevel}
         onZoom={handleZoom}
       />
-
-      {/* Canvas init trigger */}
-      <CanvasInitTrigger canvasRef={canvasRef} onReady={handleCanvasReady} />
 
       {/* ── Toolbar tabs ── */}
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--border)', paddingBottom: 2 }}>
@@ -850,7 +856,7 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
               />
               <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>px</span>
             </div>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>※ 크기 변경 후 에디터를 재시작해야 적용됩니다.</p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>※ 크기 변경 시 캔버스가 자동으로 재초기화됩니다.</p>
           </div>
         </div>
       )}

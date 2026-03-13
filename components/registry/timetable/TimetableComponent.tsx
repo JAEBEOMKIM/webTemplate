@@ -204,7 +204,7 @@ export function TimetableComponent({ config }: ComponentProps) {
                   boxSizing: 'border-box',
                 }}>
                   <div style={{
-                    fontSize: '12px', fontWeight: 700,
+                    fontSize: '14px', fontWeight: 700,
                     color: ev.color,
                     lineHeight: 1.3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -213,20 +213,11 @@ export function TimetableComponent({ config }: ComponentProps) {
                   </div>
                   {ev.durationMin >= 20 && (
                     <div style={{
-                      fontSize: '11px', color: 'var(--text-secondary)',
+                      fontSize: '13px', color: 'var(--text-secondary)',
                       marginTop: '2px', lineHeight: 1.2,
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>
                       {ev.start_time} – {ev.end_time}
-                    </div>
-                  )}
-                  {ev.durationMin >= 45 && ev.description && (
-                    <div style={{
-                      fontSize: '11px', color: 'var(--text-secondary)',
-                      marginTop: '2px', lineHeight: 1.2,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                      {ev.description}
                     </div>
                   )}
                 </div>
