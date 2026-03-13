@@ -383,14 +383,14 @@ export function KakaoMapComponent({ config }: ComponentProps) {
 
   // ── Empty state / error states ───────────────────────────────────────────
   if (!appKey) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: `${mapHeight}px`, background: 'var(--bg-secondary)', color: 'var(--text-muted)', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px', background: 'var(--bg-secondary)', color: 'var(--text-muted)', flexDirection: 'column', gap: '8px' }}>
       <span style={{ fontSize: '32px' }}>🗺️</span>
       <p style={{ fontSize: '13px' }}>관리자 패널에서 Kakao Maps API 키를 입력해주세요.</p>
     </div>
   )
 
   if (error) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: `${mapHeight}px`, background: 'var(--bg-secondary)', color: 'var(--danger)', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px', background: 'var(--bg-secondary)', color: 'var(--danger)', flexDirection: 'column', gap: '8px' }}>
       <span style={{ fontSize: '28px' }}>⚠️</span>
       <p style={{ fontSize: '13px', textAlign: 'center', padding: '0 20px' }}>{error}</p>
     </div>
@@ -404,15 +404,16 @@ export function KakaoMapComponent({ config }: ComponentProps) {
     : ''
 
   return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Optional title */}
       {mapTitle && (
-        <div style={{ padding: '12px 14px 8px', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+        <div style={{ padding: '12px 14px 8px', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0 }}>
           {mapTitle}
         </div>
       )}
 
-      <div style={{ position: 'relative', width: '100%', height: `${mapHeight}px`, flex: '0 0 auto' }}>
+      {/* flex:1 fills available height; minHeight prevents collapse when container is unconstrained */}
+      <div style={{ position: 'relative', width: '100%', flex: 1, minHeight: `${mapHeight}px` }}>
       {/* Loading overlay */}
       {!ready && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', zIndex: 10 }}>

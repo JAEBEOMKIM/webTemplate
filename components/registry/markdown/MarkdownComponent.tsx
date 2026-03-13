@@ -5,7 +5,10 @@ import type { ComponentProps, ConfigFormProps } from '../types'
 
 // Lightweight markdown → HTML converter (no external deps)
 function mdToHtml(md: string): string {
-  let html = md
+  // Preserve explicit <br/> / <br> tags before HTML escaping
+  let html = md.replace(/<br\s*\/?>/gi, '\x00BR\x00')
+
+  html = html
     // Escape existing HTML to prevent injection
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -59,7 +62,7 @@ function mdToHtml(md: string): string {
     return `<ol style="list-style:decimal;padding-left:20px;margin:8px 0">${items}</ol>`
   })
 
-  // GFM Tables
+  // GFM Tables (with column alignment: :-- left, :--: center, --: right)
   html = html.replace(/((?:^\|.+\|\n?)+)/gm, (match) => {
     const lines = match.trim().split('\n').filter(l => l.trim())
     if (lines.length < 2) return match
@@ -67,14 +70,23 @@ function mdToHtml(md: string): string {
     if (!/^\|[\s\-|:]+\|$/.test(lines[1].trim())) return match
     const parseRow = (line: string) =>
       line.replace(/^\||\|$/g, '').split('|').map(c => c.trim())
+    // Parse column alignments from separator row
+    const parseAligns = (line: string): string[] =>
+      line.replace(/^\||\|$/g, '').split('|').map(c => {
+        const s = c.trim()
+        if (s.startsWith(':') && s.endsWith(':')) return 'center'
+        if (s.endsWith(':')) return 'right'
+        return 'left'
+      })
+    const aligns = parseAligns(lines[1])
     const headers = parseRow(lines[0])
     const rows = lines.slice(2).map(parseRow)
-    const thCells = headers.map(h =>
-      `<th style="padding:7px 12px;text-align:left;font-weight:600;font-size:13px;color:var(--text-primary);border-bottom:2px solid var(--border);white-space:nowrap">${h}</th>`
+    const thCells = headers.map((h, i) =>
+      `<th style="padding:7px 12px;text-align:${aligns[i] ?? 'left'};font-weight:600;font-size:13px;color:var(--text-primary);border-bottom:2px solid var(--border);white-space:nowrap">${h}</th>`
     ).join('')
     const trRows = rows.map((cells, ri) => {
-      const tds = cells.map(c =>
-        `<td style="padding:6px 12px;font-size:13px;color:var(--text-secondary);border-bottom:1px solid var(--border)">${c}</td>`
+      const tds = cells.map((c, i) =>
+        `<td style="padding:6px 12px;font-size:13px;color:var(--text-secondary);border-bottom:1px solid var(--border);text-align:${aligns[i] ?? 'left'}">${c}</td>`
       ).join('')
       const bg = ri % 2 === 1 ? 'background:var(--bg-secondary)' : ''
       return `<tr style="${bg}">${tds}</tr>`
@@ -92,6 +104,9 @@ function mdToHtml(md: string): string {
       return `<p style="margin:0 0 10px;line-height:1.7;color:var(--text-primary)">${trimmed.replace(/\n/g, '<br/>')}</p>`
     })
     .join('\n')
+
+  // Restore preserved <br/> tags
+  html = html.replace(/\x00BR\x00/g, '<br/>')
 
   return html
 }

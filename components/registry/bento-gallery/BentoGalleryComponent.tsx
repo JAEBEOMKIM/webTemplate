@@ -235,15 +235,6 @@ export function BentoGalleryComponent({ config }: ComponentProps) {
   const configItems = useMemo<MediaItem[]>(() => (config.items as MediaItem[]) || [], [JSON.stringify(config.items)])
 
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null)
-  const [orderedItems, setOrderedItems] = useState<MediaItem[]>(configItems)
-  const [isDragging, setIsDragging] = useState(false)
-
-  // Render-phase sync: when admin edits config, reset drag order
-  const prevConfigRef = useRef(configItems)
-  if (prevConfigRef.current !== configItems) {
-    prevConfigRef.current = configItems
-    setOrderedItems(configItems)
-  }
 
   const items = configItems
 
@@ -286,7 +277,7 @@ export function BentoGalleryComponent({ config }: ComponentProps) {
             selectedItem={selectedItem}
             onClose={() => setSelectedItem(null)}
             setSelectedItem={setSelectedItem}
-            mediaItems={orderedItems}
+            mediaItems={items}
           />
         ) : (
           <motion.div
@@ -295,29 +286,13 @@ export function BentoGalleryComponent({ config }: ComponentProps) {
             initial="hidden" animate="visible" exit="hidden"
             variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } }}
           >
-            {orderedItems.map((item, index) => (
+            {items.map((item, index) => (
               <motion.div
                 key={item.id}
-                className={`relative overflow-hidden rounded-xl cursor-move ${item.span}`}
-                onClick={() => !isDragging && setSelectedItem(item)}
+                className={`relative overflow-hidden rounded-xl cursor-pointer ${item.span}`}
+                onClick={() => setSelectedItem(item)}
                 variants={{ hidden: { y: 50, scale: 0.9, opacity: 0 }, visible: { y: 0, scale: 1, opacity: 1, transition: { type: 'spring', stiffness: 350, damping: 25, delay: index * 0.05 } } }}
                 whileHover={{ scale: 1.02 }}
-                drag
-                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={1}
-                onDragStart={() => setIsDragging(true)}
-                onDragEnd={(_, info) => {
-                  setIsDragging(false)
-                  if (Math.abs(info.offset.x + info.offset.y) > 50) {
-                    const next = [...orderedItems]
-                    const dragged = next.splice(index, 1)[0]
-                    const target = info.offset.x + info.offset.y > 0
-                      ? Math.min(index + 1, next.length)
-                      : Math.max(index - 1, 0)
-                    next.splice(target, 0, dragged)
-                    setOrderedItems(next)
-                  }
-                }}
               >
                 <MediaItemView item={item} className="absolute inset-0 w-full h-full" />
                 <motion.div
