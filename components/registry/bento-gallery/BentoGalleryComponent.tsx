@@ -229,6 +229,7 @@ function GalleryModal({
 export function BentoGalleryComponent({ config }: ComponentProps) {
   const title = (config.title as string) || ''
   const description = (config.description as string) || ''
+  const displayLimit = (config.displayLimit as number) || 0
 
   // Stable reference: only changes when content changes (avoids infinite loop)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -236,7 +237,9 @@ export function BentoGalleryComponent({ config }: ComponentProps) {
 
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null)
 
+  // All items used in modal dock; grid uses slice when displayLimit is set
   const items = configItems
+  const visibleItems = displayLimit > 0 ? configItems.slice(0, displayLimit) : configItems
 
   if (items.length === 0) {
     return (
@@ -253,7 +256,8 @@ export function BentoGalleryComponent({ config }: ComponentProps) {
         <div className="mb-8 text-center">
           {title && (
             <motion.h1
-              className="text-2xl sm:text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-200 dark:to-white"
+              className="text-2xl sm:text-3xl md:text-4xl font-bold"
+              style={{ color: 'var(--text-primary)' }}
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
             >
               {title}
@@ -261,7 +265,8 @@ export function BentoGalleryComponent({ config }: ComponentProps) {
           )}
           {description && (
             <motion.p
-              className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400"
+              className="mt-2 text-sm sm:text-base"
+              style={{ color: 'var(--text-muted)' }}
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
             >
               {description}
@@ -286,7 +291,7 @@ export function BentoGalleryComponent({ config }: ComponentProps) {
             initial="hidden" animate="visible" exit="hidden"
             variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 } } }}
           >
-            {items.map((item, index) => (
+            {visibleItems.map((item, index) => (
               <motion.div
                 key={item.id}
                 className={`relative overflow-hidden rounded-xl cursor-pointer ${item.span}`}
@@ -323,6 +328,7 @@ export function BentoGalleryConfigForm({ config, onChange }: ConfigFormProps) {
   const supabase = createClient()
   const title = (config.title as string) || ''
   const description = (config.description as string) || ''
+  const displayLimit = (config.displayLimit as number) || 0
   const items = (config.items as MediaItem[]) || []
   const [expanded, setExpanded] = useState<string | null>(null)
   const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set())
@@ -396,6 +402,21 @@ export function BentoGalleryConfigForm({ config, onChange }: ConfigFormProps) {
       <div>
         <label style={labelStyle}>설명</label>
         <input className="input" value={description} onChange={e => onChange({ ...config, description: e.target.value })} placeholder="갤러리 설명 (선택)" style={{ fontSize: '13px' }} />
+      </div>
+      <div>
+        <label style={labelStyle}>목록 노출 건수</label>
+        <input
+          className="input"
+          type="number"
+          min={0}
+          value={displayLimit || ''}
+          onChange={e => onChange({ ...config, displayLimit: Math.max(0, Number(e.target.value)) || 0 })}
+          placeholder="0 = 전체 노출"
+          style={{ fontSize: '13px', width: '120px' }}
+        />
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          0이면 전부 노출 · 숫자 입력 시 목록에서 해당 건수만 표시 (이미지 상세 하단 목록은 항상 전체 표시)
+        </p>
       </div>
 
       <div>
