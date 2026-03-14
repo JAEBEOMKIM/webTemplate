@@ -29,6 +29,8 @@ export interface EditorCanvasRef {
   /** 구버전 canvas.backgroundImage → 선택 가능한 오브젝트로 이전 */
   migrateBackgroundImage(layerId: string): Promise<void>
   clearBackground(): void
+  /** 배경을 투명(페이지 배경색)으로 설정 */
+  setBackgroundTransparent(): void
   removeLayer(layerId: string): void
   setLayerVisible(layerId: string, visible: boolean): void
   setLayerOpacity(layerId: string, opacity: number): void  // 0–100
@@ -231,6 +233,15 @@ const EditorCanvas = forwardRef<EditorCanvasRef, EditorCanvasProps>(
         onModified?.()
       },
 
+      setBackgroundTransparent() {
+        const cv = getCanvas()
+        if (!cv) return
+        cv.backgroundImage = undefined as unknown as typeof cv.backgroundImage
+        cv.backgroundColor = ''
+        cv.requestRenderAll()
+        onModified?.()
+      },
+
       removeLayer(layerId) {
         const cv = getCanvas()
         if (!cv) return
@@ -338,7 +349,7 @@ const EditorCanvas = forwardRef<EditorCanvasRef, EditorCanvasProps>(
       exportPNG() {
         const cv = getCanvas()
         if (!cv) return ''
-        return cv.toDataURL({ format: 'png', multiplier: 1 })
+        return cv.toDataURL({ format: 'png', multiplier: 2 })
       },
 
       async loadJSON(json) {

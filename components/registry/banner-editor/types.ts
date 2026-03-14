@@ -35,7 +35,7 @@ export type Layer = ImageLayer | TextLayer
 
 // ── Background ────────────────────────────────────────────────────────────────
 
-export type BackgroundType = 'color' | 'image'
+export type BackgroundType = 'color' | 'image' | 'transparent'
 
 export interface BannerBackground {
   type: BackgroundType

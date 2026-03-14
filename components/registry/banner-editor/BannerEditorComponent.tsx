@@ -145,14 +145,12 @@ export function BannerEditorComponent({ config }: ComponentProps) {
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', overflow: 'hidden', borderRadius: 8 }}>
-      <img
-        src={cfg.exportedImageUrl}
-        alt="배너"
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        loading="lazy"
-      />
-    </div>
+    <img
+      src={cfg.exportedImageUrl}
+      alt="배너"
+      style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 8 }}
+      loading="lazy"
+    />
   )
 }
 
@@ -233,6 +231,8 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
         }
         setLayers(prev => [migratedLayer, ...prev.filter(l => !(l.type === 'image' && (l as ImageLayer).isBackground))])
       }
+    } else if (cur.background.type === 'transparent') {
+      canvasRef.current?.setBackgroundTransparent()
     } else if (cur.background.type === 'color') {
       canvasRef.current?.setBackgroundColor(cur.background.color)
     } else if (cur.background.imageUrl) {
@@ -315,6 +315,11 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
     onChange({ ...config, background: { type: 'image', imageUrl: data.publicUrl, color: '' }, fabricJson: canvasRef.current?.getJSON() ?? cfg.fabricJson })
     if (bgFileRef.current) bgFileRef.current.value = ''
   }
+
+  const handleBgTransparent = useCallback(() => {
+    canvasRef.current?.setBackgroundTransparent()
+    onChange({ ...config, background: { type: 'transparent', color: '', imageUrl: '' }, fabricJson: canvasRef.current?.getJSON() ?? cfg.fabricJson })
+  }, [config, onChange, cfg.fabricJson])
 
   const handleClearBackground = useCallback(() => {
     const bgLayer = layers.find(l => l.type === 'image' && (l as ImageLayer).isBackground)
@@ -536,8 +541,7 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
           suppressHydrationWarning
           style={{
             width: '100%',
-            minHeight: 160,
-            maxHeight: 520,
+            height: Math.max(80, Math.min(cfg.canvasHeight * effectiveScale + 2, 600)),
             overflow: 'auto',
             background: 'var(--bg-tertiary)',
             borderRadius: 8,
@@ -635,6 +639,17 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
                     style={{ width: 22, height: 22, background: c, border: `2px solid ${cfg.background.color === c ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 4, cursor: 'pointer' }}
                   />
                 ))}
+                <button
+                  type="button"
+                  onClick={handleBgTransparent}
+                  title="페이지 배경색 (투명)"
+                  style={{
+                    width: 22, height: 22,
+                    background: 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 0 0 / 8px 8px',
+                    border: `2px solid ${cfg.background.type === 'transparent' ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 4, cursor: 'pointer',
+                  }}
+                />
               </div>
             </div>
           </div>
