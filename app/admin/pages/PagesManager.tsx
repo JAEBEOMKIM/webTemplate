@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -14,11 +14,17 @@ export interface PageRow {
   created_at: string
 }
 
-const accessConfig: Record<string, { label: string; color: string }> = {
-  public:   { label: '공개',      color: 'var(--success)' },
-  password: { label: '비밀번호',  color: 'var(--warning)' },
-  oauth:    { label: 'OAuth',     color: 'var(--accent-text)' },
+const accessConfig: Record<string, { label: string; color: string; icon: string }> = {
+  public:   { label: '공개',     color: 'var(--success)',      icon: '🌐' },
+  password: { label: '비밀번호', color: 'var(--warning)',      icon: '🔒' },
+  oauth:    { label: 'OAuth',    color: 'var(--accent-text)',  icon: '🔑' },
 }
+
+const ACCESS_OPTIONS = [
+  { value: 'public',   label: '🌐 공개',     desc: '누구나 접근' },
+  { value: 'password', label: '🔒 비밀번호', desc: '비밀번호 필요' },
+  { value: 'oauth',    label: '🔑 OAuth',    desc: '소셜 로그인 + 초대코드' },
+]
 
 function extractStoragePath(url: string): string | null {
   const marker = '/storage/v1/object/public/gallery-images/'
@@ -32,6 +38,24 @@ export default function PagesManager({ initialPages }: { initialPages: PageRow[]
   const [toggling, setToggling]   = useState<Set<string>>(new Set())
   const [confirmPage, setConfirmPage] = useState<PageRow | null>(null)
   const [deleting, setDeleting]   = useState(false)
+
+  // ── 권한 변경 상태 ──────────────────────────────────────────────────────────
+  const [accessPopover, setAccessPopover] = useState<string | null>(null)  // page.id
+  const [accessPopoverPos, setAccessPopoverPos] = useState<{ top: number; left: number } | null>(null)
+  const [changingAccess, setChangingAccess] = useState<Set<string>>(new Set())
+  const [pwModal, setPwModal] = useState<{ page: PageRow; newType: string } | null>(null)
+  const [pwInput, setPwInput] = useState('')
+  const [pwError, setPwError] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const pwInputRef = useRef<HTMLInputElement>(null)
+
+  // ── 스크롤 시 팝오버 닫기 (fixed 팝오버는 스크롤에 따라 이동하지 않으므로)
+  useEffect(() => {
+    if (!accessPopover) return
+    const close = () => { setAccessPopover(null); setAccessPopoverPos(null) }
+    window.addEventListener('scroll', close, true)
+    return () => window.removeEventListener('scroll', close, true)
+  }, [accessPopover])
 
   // ── 발행/정지 토글 ─────────────────────────────────────────────────────────
   const handleTogglePublish = async (page: PageRow) => {
@@ -86,6 +110,53 @@ export default function PagesManager({ initialPages }: { initialPages: PageRow[]
     setConfirmPage(null)
   }
 
+  // ── 권한 변경 ──────────────────────────────────────────────────────────────
+  // Vercel: rerender-functional-setstate — use function form for derived state
+  const handleAccessTypeSelect = useCallback((page: PageRow, newType: string) => {
+    setAccessPopover(null); setAccessPopoverPos(null)
+    if (newType === page.access_type) return
+    if (newType === 'password') {
+      setPwInput(''); setPwError('')
+      setPwModal({ page, newType })
+      // Focus the input after modal mounts
+      setTimeout(() => pwInputRef.current?.focus(), 50)
+      return
+    }
+    applyAccessChange(page.id, newType, undefined)
+  }, []) // eslint-disable-line
+
+  const applyAccessChange = async (pageId: string, newType: string, password: string | undefined) => {
+    setChangingAccess(prev => new Set(prev).add(pageId))
+    const res = await fetch('/api/pages/access', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageId, access_type: newType, password }),
+    })
+    if (res.ok) {
+      setPages(prev => prev.map(p => p.id === pageId ? { ...p, access_type: newType } : p))
+    }
+    setChangingAccess(prev => { const s = new Set(prev); s.delete(pageId); return s })
+  }
+
+  const handlePwConfirm = async () => {
+    if (!pwModal) return
+    if (!pwInput.trim()) { setPwError('비밀번호를 입력하세요'); return }
+    setPwSaving(true); setPwError('')
+    const res = await fetch('/api/pages/access', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageId: pwModal.page.id, access_type: pwModal.newType, password: pwInput }),
+    })
+    if (res.ok) {
+      setPages(prev => prev.map(p => p.id === pwModal.page.id ? { ...p, access_type: pwModal.newType } : p))
+      setPwModal(null)
+    } else {
+      const data = await res.json()
+      setPwError(data.error || '변경 실패')
+    }
+    setPwSaving(false)
+  }
+
   const confirmTarget = confirmPage
 
   if (pages.length === 0) {
@@ -102,6 +173,39 @@ export default function PagesManager({ initialPages }: { initialPages: PageRow[]
 
   return (
     <>
+    {/* ── 비밀번호 입력 모달 ─────────────────────────────────────────────────── */}
+    {pwModal && (
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+        onClick={e => { if (e.target === e.currentTarget && !pwSaving) { setPwModal(null) } }}
+      >
+        <div style={{ background: 'var(--bg-primary)', borderRadius: '14px', padding: '24px', width: '100%', maxWidth: '360px', border: '1px solid var(--border)', boxShadow: '0 12px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <p style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', margin: 0 }}>비밀번호 설정</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+            <strong style={{ color: 'var(--text-primary)' }}>{pwModal.page.title}</strong> 페이지에 접근할 비밀번호를 입력하세요.
+          </p>
+          <input
+            ref={pwInputRef}
+            type="password"
+            className="input"
+            placeholder="새 비밀번호"
+            value={pwInput}
+            onChange={e => { setPwInput(e.target.value); setPwError('') }}
+            onKeyDown={e => { if (e.key === 'Enter') handlePwConfirm() }}
+            disabled={pwSaving}
+            style={{ fontSize: '14px' }}
+          />
+          {pwError && <p style={{ fontSize: '12px', color: 'var(--danger)', margin: 0 }}>{pwError}</p>}
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button type="button" className="btn-secondary" onClick={() => { if (!pwSaving) setPwModal(null) }} disabled={pwSaving} style={{ fontSize: '13px' }}>취소</button>
+            <button type="button" className="btn-primary" onClick={handlePwConfirm} disabled={pwSaving} style={{ fontSize: '13px', minWidth: '64px' }}>
+              {pwSaving ? '저장 중...' : '확인'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <ConfirmDialog
       open={!!confirmTarget}
       title="페이지 삭제"
@@ -112,6 +216,35 @@ export default function PagesManager({ initialPages }: { initialPages: PageRow[]
       onConfirm={handleConfirmDelete}
       onCancel={() => { if (!deleting) setConfirmPage(null) }}
     />
+
+    {/* ── 권한 변경 팝오버 (fixed — overflow 컨테이너에 클리핑되지 않음) ──────── */}
+    {accessPopover && accessPopoverPos && (
+      <>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => { setAccessPopover(null); setAccessPopoverPos(null) }} />
+        <div style={{ position: 'fixed', top: accessPopoverPos.top, left: accessPopoverPos.left, zIndex: 200, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: '180px', overflow: 'hidden' }}>
+          {(() => {
+            const page = pages.find(p => p.id === accessPopover)
+            if (!page) return null
+            return ACCESS_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleAccessTypeSelect(page, opt.value)}
+                style={{
+                  display: 'flex', flexDirection: 'column', gap: '1px', width: '100%',
+                  padding: '8px 12px', textAlign: 'left', border: 'none', cursor: 'pointer',
+                  background: page.access_type === opt.value ? 'var(--bg-secondary)' : 'transparent',
+                  borderLeft: page.access_type === opt.value ? '2px solid var(--accent)' : '2px solid transparent',
+                }}
+              >
+                <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{opt.label}</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{opt.desc}</span>
+              </button>
+            ))
+          })()}
+        </div>
+      </>
+    )}
 
     <div className="card" style={{ overflow: 'hidden' }}>
       <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
@@ -156,11 +289,24 @@ export default function PagesManager({ initialPages }: { initialPages: PageRow[]
                 /{page.slug}
               </div>
 
-              {/* 권한 */}
+              {/* 권한 — 클릭 시 변경 팝오버 */}
               <div>
-                <span style={{ fontSize: '11px', fontWeight: 500, color: ac.color, background: `${ac.color}18`, padding: '2px 8px', borderRadius: '20px' }}>
-                  {ac.label}
-                </span>
+                <button
+                  type="button"
+                  onClick={e => {
+                    if (accessPopover === page.id) {
+                      setAccessPopover(null); setAccessPopoverPos(null); return
+                    }
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    setAccessPopoverPos({ top: rect.bottom + 4, left: rect.left })
+                    setAccessPopover(page.id)
+                  }}
+                  disabled={changingAccess.has(page.id)}
+                  style={{ fontSize: '11px', fontWeight: 500, color: ac.color, background: `${ac.color}18`, padding: '2px 8px', borderRadius: '20px', border: `1px solid ${ac.color}40`, cursor: 'pointer', opacity: changingAccess.has(page.id) ? 0.6 : 1 }}
+                  title="클릭하여 권한 변경"
+                >
+                  {changingAccess.has(page.id) ? '...' : `${ac.icon} ${ac.label}`}
+                </button>
               </div>
 
               {/* 상태 + 발행/정지 토글 */}
