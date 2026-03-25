@@ -12,6 +12,7 @@ import { TimetableComponent, TimetableConfigForm } from './timetable/TimetableCo
 import { KakaoMapComponent, KakaoMapConfigForm } from './kakaomap/KakaoMapComponent'
 import { BannerEditorComponent, BannerEditorConfigForm } from './banner-editor/BannerEditorComponent'
 import { MindmapComponent, MindmapConfigForm } from './mindmap/MindmapComponent'
+import { TitleHeaderComponent, TitleHeaderConfigForm } from './title-header/TitleHeaderComponent'
 import type {
   ComponentDefinition,
   ComponentImpl,
@@ -36,6 +37,7 @@ export const componentImplementations = new Map<string, ComponentImpl>([
   ['kakaomap', { Component: KakaoMapComponent, ConfigForm: KakaoMapConfigForm }],
   ['banner-editor', { Component: BannerEditorComponent, ConfigForm: BannerEditorConfigForm }],
   ['mindmap', { Component: MindmapComponent, ConfigForm: MindmapConfigForm }],
+  ['title-header', { Component: TitleHeaderComponent, ConfigForm: TitleHeaderConfigForm }],
 ])
 
 // ── DB 행 + 코드 구현체 병합 → 렌더 가능한 컴포넌트만 반환 ──────────────
@@ -160,6 +162,7 @@ export const componentRegistry = new Map<string, ComponentDefinition>([
   ['kakaomap', { id: 'kakaomap', name: '카카오맵', description: '카카오맵으로 위치와 마커를 표시', icon: '🗺️', defaultConfig: { app_key: '', center_lat: 37.5665, center_lng: 126.9780, zoom: 3, map_type: 'ROADMAP', markers: [], show_controls: true, height: 400, use_current_location: false, destination_link: '', map_title: '' }, Component: KakaoMapComponent, ConfigForm: KakaoMapConfigForm }],
   ['banner-editor', { id: 'banner-editor', name: '배너 에디터', description: '레이어 기반 배너 이미지 편집기', icon: '🎨', defaultConfig: { canvasWidth: 900, canvasHeight: 300, background: { type: 'color', color: '#1e293b', imageUrl: '' }, layers: [], fabricJson: '', exportedImageUrl: null }, Component: BannerEditorComponent, ConfigForm: BannerEditorConfigForm }],
   ['mindmap', { id: 'mindmap', name: '마인드맵', description: '노드 기반 마인드맵 (링크 지원)', icon: '🧠', defaultConfig: { title: '마인드맵', canvasHeight: 500, nodes: [{ id: 'root', label: '중심 주제', color: 'blue', link: '', x: 250, y: 200, parentId: null }, { id: 'child-1', label: '주제 1', color: 'green', link: '', x: 500, y: 100, parentId: 'root' }, { id: 'child-2', label: '주제 2', color: 'purple', link: '', x: 500, y: 200, parentId: 'root' }, { id: 'child-3', label: '주제 3', color: 'orange', link: '', x: 500, y: 300, parentId: 'root' }] }, Component: MindmapComponent, ConfigForm: MindmapConfigForm }],
+  ['title-header', { id: 'title-header', name: '타이틀 헤더', description: '타이프라이터/빛나는 텍스트 등 애니메이션 타이틀', icon: '✍️', defaultConfig: { variant: 'typewriter', texts: ['환영합니다', '반갑습니다', 'Welcome'], prefix: '', typingSpeed: 80, deletingSpeed: 40, pauseDuration: 2000, cursorChar: '|', cursorColor: '', gradientColors: '', gradientSpeed: 2, hoverGlow: false, fontSize: 32, fontFamily: 'inherit', fontWeight: 800, italic: false, align: 'center', textColor: '', subtitle: '', subtitleColor: '', link: '' }, Component: TitleHeaderComponent, ConfigForm: TitleHeaderConfigForm }],
 ])
 
 export type { ComponentDefinition, ComponentProps, PageData, PageComponentData } from './types'
