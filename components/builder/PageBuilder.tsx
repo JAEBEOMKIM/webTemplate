@@ -31,10 +31,21 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
+import { PreviewErrorBoundary } from './PreviewErrorBoundary'
 
 const COLS = 10
 const ROW_HEIGHT = 60
 const MAX_ROWS = 20
+
+const DEVICE_PRESETS = [
+  { id: 'pc', label: 'PC', width: 1280 },
+  { id: 'laptop', label: 'Laptop', width: 1024 },
+  { id: 'tablet', label: 'iPad', width: 768 },
+  { id: 'mobile-lg', label: 'iPhone 16 Pro Max', width: 430 },
+  { id: 'mobile-md', label: 'iPhone 14 Pro', width: 393 },
+  { id: 'mobile-sm', label: 'Galaxy S24', width: 360 },
+  { id: 'mobile-xs', label: 'iPhone SE', width: 320 },
+] as const
 
 interface Props {
   page: PageData
@@ -223,6 +234,9 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
   // Panel collapse states
   const [paletteCollapsed, setPaletteCollapsed] = useState(false)
   const [configCollapsed, setConfigCollapsed] = useState(false)
+  const [previewMode, setPreviewMode] = useState(true)
+  const [devicePreset, setDevicePreset] = useState<string>('pc')
+  const activePreset = DEVICE_PRESETS.find(d => d.id === devicePreset) ?? DEVICE_PRESETS[0]
 
   // Resizable panel widths
   const [paletteWidth, setPaletteWidth] = useState(180)
@@ -520,6 +534,33 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>/{page.slug} · {COLS}열 × {MAX_ROWS}행</div>
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                onClick={() => setPreviewMode(p => !p)}
+                style={{
+                  padding: '5px 10px', fontSize: '12px', fontWeight: 600,
+                  background: previewMode ? 'var(--accent)' : 'var(--bg-secondary)',
+                  color: previewMode ? 'white' : 'var(--text-secondary)',
+                  border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer',
+                }}
+                title={previewMode ? '미리보기 끄기' : '미리보기 켜기'}
+              >
+                {previewMode ? '👁 미리보기' : '👁‍🗨 플레이스홀더'}
+              </button>
+              <select
+                value={devicePreset}
+                onChange={e => setDevicePreset(e.target.value)}
+                style={{
+                  padding: '5px 8px', fontSize: '11px', fontWeight: 600,
+                  background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
+                  border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer',
+                }}
+              >
+                {DEVICE_PRESETS.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.label}{d.width ? ` (${d.width}px)` : ''}
+                  </option>
+                ))}
+              </select>
               <span className={page.is_published ? 'badge-success' : 'badge-draft'}>
                 {page.is_published ? '발행됨' : '초안'}
               </span>
@@ -684,13 +725,48 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                             >×</button>
                           </div>
                         </div>
-                        <div style={{
-                          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: 'var(--text-muted)', fontSize: '12px', gap: '8px', padding: '8px',
-                        }}>
-                          <span style={{ fontSize: '20px', opacity: 0.35 }}>{def?.icon}</span>
-                          <span style={{ opacity: 0.5 }}>{def?.name}</span>
-                        </div>
+                        {(() => {
+                          const VIRTUAL_W = activePreset.width
+                          const headerH = 35
+                          const cellW = ((layoutItem?.w ?? 1) / COLS) * containerWidth - 16
+                          const cellH = (layoutItem?.h ?? 1) * ROW_HEIGHT - headerH - 8
+                          const scale = Math.min(cellW / VIRTUAL_W, 1)
+                          const virtualH = cellH / scale
+                          const ResolvedComp = resolved?.Component
+                          const placeholder = (
+                            <div style={{
+                              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: 'var(--text-muted)', fontSize: '12px', gap: '8px', padding: '8px',
+                            }}>
+                              <span style={{ fontSize: '20px', opacity: 0.35 }}>{def?.icon}</span>
+                              <span style={{ opacity: 0.5 }}>{def?.name}</span>
+                            </div>
+                          )
+
+                          if (!previewMode || !ResolvedComp) return placeholder
+
+                          return (
+                            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                              <PreviewErrorBoundary key={JSON.stringify(comp.config)} fallback={placeholder}>
+                                <div style={{
+                                  pointerEvents: 'none',
+                                  width: `${VIRTUAL_W}px`,
+                                  height: `${virtualH}px`,
+                                  transform: `scale(${scale})`,
+                                  transformOrigin: 'top left',
+                                  overflow: 'hidden',
+                                }}>
+                                  <ResolvedComp
+                                    componentId={comp.id}
+                                    config={comp.config}
+                                    pageId={page.id}
+                                    isAdmin={false}
+                                  />
+                                </div>
+                              </PreviewErrorBoundary>
+                            </div>
+                          )
+                        })()}
                       </div>
                     )
                   })
