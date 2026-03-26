@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ComponentProps, ConfigFormProps } from '../types'
+import { loadFont } from '@/lib/fonts/font-registry'
+import { FontFamilySelect } from '../shared/FontFamilySelect'
 
 // Lightweight markdown → HTML converter (no external deps)
 function mdToHtml(md: string): string {
@@ -113,6 +115,9 @@ function mdToHtml(md: string): string {
 
 export function MarkdownComponent({ config }: ComponentProps) {
   const content = (config.content as string) || ''
+  const fontFamily = (config.fontFamily as string) || ''
+
+  useEffect(() => { if (fontFamily) loadFont(fontFamily) }, [fontFamily])
 
   if (!content.trim()) {
     return (
@@ -125,7 +130,7 @@ export function MarkdownComponent({ config }: ComponentProps) {
 
   return (
     <div
-      style={{ padding: '16px', width: '100%', height: '100%', boxSizing: 'border-box', fontSize: '14px' }}
+      style={{ padding: '16px', width: '100%', height: '100%', boxSizing: 'border-box', fontSize: '14px', fontFamily: fontFamily || undefined }}
       dangerouslySetInnerHTML={{ __html: mdToHtml(content) }}
       suppressHydrationWarning
     />
@@ -171,6 +176,15 @@ export function MarkdownConfigForm({ config, onChange }: ConfigFormProps) {
           dangerouslySetInnerHTML={{ __html: mdToHtml(content) || '<p style="color:var(--text-muted)">내용 없음</p>' }}
         />
       )}
+
+      {/* Font */}
+      <div>
+        <label style={{ ...labelStyle }}>폰트</label>
+        <FontFamilySelect
+          value={(config.fontFamily as string) || 'inherit'}
+          onChange={v => onChange({ ...config, fontFamily: v })}
+        />
+      </div>
 
       <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
         # 제목 &nbsp;·&nbsp; **굵게** &nbsp;·&nbsp; *기울임* &nbsp;·&nbsp; ~~취소선~~ &nbsp;·&nbsp; `코드` &nbsp;·&nbsp; - 목록 &nbsp;·&nbsp; &gt; 인용 &nbsp;·&nbsp; [링크](url) &nbsp;·&nbsp; | 표 |

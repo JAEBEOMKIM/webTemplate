@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, type Variants } from 'framer-motion'
 import type { ComponentProps, ConfigFormProps } from '../types'
+import { loadFont } from '@/lib/fonts/font-registry'
+import { FontFamilySelect } from '../shared/FontFamilySelect'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -31,18 +33,6 @@ interface TitleHeaderConfig {
   subtitleColor: string
   link: string
 }
-
-// ── Font Presets ───────────────────────────────────────────────────────────
-
-const FONT_PRESETS = [
-  { id: 'inherit', label: '기본', value: 'inherit' },
-  { id: 'sans', label: '고딕 (Sans)', value: '-apple-system, "Segoe UI", sans-serif' },
-  { id: 'serif', label: '명조 (Serif)', value: 'Georgia, "Times New Roman", serif' },
-  { id: 'mono', label: '고정폭 (Mono)', value: '"JetBrains Mono", "Fira Code", monospace' },
-  { id: 'noto-sans', label: 'Noto Sans KR', value: '"Noto Sans KR", sans-serif' },
-  { id: 'nanum-gothic', label: '나눔고딕', value: '"NanumGothic", sans-serif' },
-  { id: 'pretendard', label: 'Pretendard', value: '"Pretendard", sans-serif' },
-] as const
 
 const WEIGHT_PRESETS = [
   { value: 100, label: 'Thin' },
@@ -223,6 +213,11 @@ export function TitleHeaderComponent({ config }: ComponentProps) {
   const subtitleColor = cfg.subtitleColor || 'var(--text-muted)'
   const fontSize = cfg.fontSize || 32
 
+  // 선택된 폰트 동적 로드
+  useEffect(() => {
+    if (cfg.fontFamily) loadFont(cfg.fontFamily)
+  }, [cfg.fontFamily])
+
   return (
     <div
       style={{
@@ -397,15 +392,10 @@ export function TitleHeaderConfigForm({ config, onChange }: ConfigFormProps) {
         {/* Font Family */}
         <div>
           <label style={{ ...labelStyle, fontSize: '10px' }}>글꼴</label>
-          <select
-            style={{ ...inputStyle, cursor: 'pointer' }}
+          <FontFamilySelect
             value={cfg.fontFamily || 'inherit'}
-            onChange={e => update({ fontFamily: e.target.value })}
-          >
-            {FONT_PRESETS.map(f => (
-              <option key={f.id} value={f.value}>{f.label}</option>
-            ))}
-          </select>
+            onChange={v => update({ fontFamily: v })}
+          />
         </div>
 
         {/* Font Weight */}

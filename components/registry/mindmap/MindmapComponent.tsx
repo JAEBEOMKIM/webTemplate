@@ -4,6 +4,8 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion, type PanInfo } from 'framer-motion'
 import { flushSync } from 'react-dom'
 import type { ComponentProps, ConfigFormProps } from '../types'
+import { loadFont } from '@/lib/fonts/font-registry'
+import { FontFamilySelect } from '../shared/FontFamilySelect'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -152,6 +154,9 @@ export function MindmapComponent({ config, isAdmin }: ComponentProps) {
   const title = cfg.title || ''
   const initialNodes = cfg.nodes || []
   const canvasHeight = cfg.canvasHeight || 500
+  const fontFamily = (config.fontFamily as string) || ''
+
+  useEffect(() => { if (fontFamily) loadFont(fontFamily) }, [fontFamily])
 
   const [nodes, setNodes] = useState<MindmapNode[]>(initialNodes)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -186,7 +191,7 @@ export function MindmapComponent({ config, isAdmin }: ComponentProps) {
   const svgH = Math.max(canvasHeight, ...nodes.map(n => n.y + 80))
 
   return (
-    <div style={{ padding: '16px' }}>
+    <div style={{ padding: '16px', fontFamily: fontFamily || undefined }}>
       {title && (
         <h3 style={{
           fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)',
@@ -412,6 +417,15 @@ export function MindmapConfigForm({ config, onChange }: ConfigFormProps) {
           value={cfg.title || ''}
           onChange={e => update({ title: e.target.value })}
           placeholder="마인드맵 제목"
+        />
+      </div>
+
+      {/* Font */}
+      <div>
+        <label style={labelStyle}>폰트</label>
+        <FontFamilySelect
+          value={(config.fontFamily as string) || 'inherit'}
+          onChange={v => onChange({ ...config, fontFamily: v })}
         />
       </div>
 
