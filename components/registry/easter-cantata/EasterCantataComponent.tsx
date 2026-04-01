@@ -38,6 +38,7 @@ interface CantataConfig {
   // 지휘 / 반주
   conductor_name: string
   pianist_name: string
+  organist_name: string
   choir_label: string
   // 합창단 파트
   soprano: string
@@ -84,6 +85,7 @@ const DEFAULT_CONFIG: CantataConfig = {
   ],
   conductor_name: '강태휘',
   pianist_name: '구예담',
+  organist_name: '',
   choir_label: '임마누엘 찬양대',
   soprano: '김지수 이민정 박소연 최윤희 정다은 한지혜 유민주 김태희 이은지 서현주 홍수아',
   alto: '이지영 박은혜 최민정 김수진 정현주 이나영 조은아 배지민 강수연 유선희',
@@ -403,7 +405,7 @@ export function EasterCantataComponent({ config }: ComponentProps) {
                   >
                     지휘 및 반주
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: cfg.organist_name ? '1fr 1fr 1fr' : '1fr 1fr', gap: '12px' }}>
                     <RoleCard
                       role="Conductor"
                       name={cfg.conductor_name}
@@ -418,6 +420,15 @@ export function EasterCantataComponent({ config }: ComponentProps) {
                       primary={cfg.color_primary}
                       accent={cfg.color_tertiary}
                     />
+                    {cfg.organist_name && (
+                      <RoleCard
+                        role="Organ"
+                        name={cfg.organist_name}
+                        bg={cfg.color_surface}
+                        primary={cfg.color_primary}
+                        accent={cfg.color_tertiary}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -960,6 +971,11 @@ export function EasterCantataConfigForm({ config, onChange }: ConfigFormProps) {
               <label style={labelStyle}>피아니스트</label>
               <input style={inputStyle} value={cfg.pianist_name}
                 onChange={e => set('pianist_name', e.target.value)} />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>오르가니스트 (선택)</label>
+              <input style={inputStyle} placeholder="이름 입력시 표시" value={cfg.organist_name}
+                onChange={e => set('organist_name', e.target.value)} />
             </div>
           </div>
           <div style={fieldStyle}>
