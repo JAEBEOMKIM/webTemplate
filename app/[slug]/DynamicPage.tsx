@@ -191,6 +191,24 @@ const GRID_ROW_HEIGHT = 60 // px
 const GRID_GAP = 8 // px
 
 function PageContent({ page, components, user, isAdmin }: { page: PageData; components: PageComponentData[]; user?: UserProfile; isAdmin?: boolean }) {
+  // 전체 페이지 단독 표시 컴포넌트 확인
+  const fullPageComp = components.find(c => c.config.full_page === true)
+  if (fullPageComp) {
+    const def = componentRegistry.get(fullPageComp.component_type)
+    if (def) {
+      return (
+        <div style={{ width: '100%', minHeight: '100vh' }}>
+          <def.Component
+            componentId={fullPageComp.id}
+            config={fullPageComp.config}
+            pageId={page.id}
+            isAdmin={isAdmin}
+          />
+        </div>
+      )
+    }
+  }
+
   // 그리드 전체 높이 계산 (빈 공간 없이 딱 맞게)
   const gridRows = components.length > 0
     ? Math.max(...components.map(c => (c.grid_y ?? 0) + (c.grid_h ?? 6)))

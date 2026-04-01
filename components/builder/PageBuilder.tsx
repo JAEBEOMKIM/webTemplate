@@ -687,6 +687,11 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                             <span style={{ fontSize: '11px', fontWeight: 700, color: isSelected ? 'white' : 'var(--text-primary)' }}>
                               {(comp.config.title as string) || def?.name}
                             </span>
+                            {(comp.config.full_page as boolean) === true && (
+                              <span style={{ fontSize: '9px', fontWeight: 800, background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--accent)', color: isSelected ? 'white' : '#fff', borderRadius: '4px', padding: '1px 5px', letterSpacing: '0.04em', flexShrink: 0 }}>
+                                전체
+                              </span>
+                            )}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                             <button
@@ -818,15 +823,32 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                   <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
                   <div>
                     <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>공통 옵션</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="checkbox"
-                        id="common-show-border"
-                        checked={(selectedComponent.config.show_border as boolean) !== false}
-                        onChange={e => handleConfigChange(selectedComponent.id, { ...selectedComponent.config, show_border: e.target.checked })}
-                        style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
-                      />
-                      <label htmlFor="common-show-border" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>테두리 표시</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          id="common-show-border"
+                          checked={(selectedComponent.config.show_border as boolean) !== false}
+                          onChange={e => handleConfigChange(selectedComponent.id, { ...selectedComponent.config, show_border: e.target.checked })}
+                          style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
+                        />
+                        <label htmlFor="common-show-border" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>테두리 표시</label>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          id="common-full-page"
+                          checked={(selectedComponent.config.full_page as boolean) === true}
+                          onChange={e => handleConfigChange(selectedComponent.id, { ...selectedComponent.config, full_page: e.target.checked })}
+                          style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
+                        />
+                        <label htmlFor="common-full-page" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>전체 페이지 단독 표시</label>
+                      </div>
+                      {(selectedComponent.config.full_page as boolean) === true && (
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, padding: '6px 10px', background: 'var(--accent-subtle)', borderRadius: '6px', border: '1px solid var(--accent)', margin: 0 }}>
+                          ✦ 이 컴포넌트가 페이지 전체를 단독으로 채웁니다.<br />헤더·그리드·여백 없이 풀스크린으로 렌더링됩니다.
+                        </p>
+                      )}
                     </div>
                   </div>
                   <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
