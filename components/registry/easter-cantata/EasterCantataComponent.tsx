@@ -389,184 +389,85 @@ export function EasterCantataComponent({ config }: ComponentProps) {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', textAlign: 'left' }}>
-                {/* 지휘 / 반주 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4
-                    className="ec-body"
-                    style={{
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      color: cfg.color_secondary,
-                      borderBottom: `1px solid rgba(255,255,255,0.1)`,
-                      paddingBottom: '8px',
-                      margin: 0,
-                    }}
-                  >
+              {/* 단일 박스: 지휘/반주 + 합창 + 오케스트라 */}
+              <div
+                style={{
+                  background: cfg.color_surface,
+                  borderRadius: '12px',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '20px',
+                  textAlign: 'left',
+                }}
+              >
+                {/* 지휘 및 반주 */}
+                <div>
+                  <p className="ec-body" style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: cfg.color_tertiary, marginBottom: '10px' }}>
                     지휘 및 반주
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: cfg.organist_name ? '1fr 1fr 1fr' : '1fr 1fr', gap: '12px' }}>
-                    <RoleCard
-                      role="Conductor"
-                      name={cfg.conductor_name}
-                      bg={cfg.color_surface}
-                      primary={cfg.color_primary}
-                      accent={cfg.color_tertiary}
-                    />
-                    <RoleCard
-                      role="Piano"
-                      name={cfg.pianist_name}
-                      bg={cfg.color_surface}
-                      primary={cfg.color_primary}
-                      accent={cfg.color_tertiary}
-                    />
-                    {cfg.organist_name && (
-                      <RoleCard
-                        role="Organ"
-                        name={cfg.organist_name}
-                        bg={cfg.color_surface}
-                        primary={cfg.color_primary}
-                        accent={cfg.color_tertiary}
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* 합창단 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4
-                    className="ec-body"
-                    style={{
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      color: cfg.color_secondary,
-                      borderBottom: `1px solid rgba(255,255,255,0.1)`,
-                      paddingBottom: '8px',
-                      margin: 0,
-                    }}
-                  >
-                    합창 및 오케스트라
-                  </h4>
-
-                  <div
-                    style={{
-                      background: cfg.color_surface,
-                      borderRadius: '12px',
-                      padding: '20px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '20px',
-                    }}
-                  >
-                    {/* 합창 */}
-                    <div>
-                      <p
-                        className="ec-body"
-                        style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          color: cfg.color_tertiary,
-                          marginBottom: '12px',
-                        }}
-                      >
-                        Choir ({cfg.choir_label})
-                      </p>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {[
-                          { part: 'Soprano', members: cfg.soprano },
-                          { part: 'Alto', members: cfg.alto },
-                          { part: 'Tenor', members: cfg.tenor },
-                          { part: 'Bass', members: cfg.bass },
-                        ].map(({ part, members }) => (
-                          members ? (
-                            <div key={part}>
-                              <span
-                                className="ec-body"
-                                style={{
-                                  display: 'block',
-                                  fontSize: '9px',
-                                  fontWeight: 700,
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.08em',
-                                  color: `${cfg.color_tertiary}bb`,
-                                  marginBottom: '3px',
-                                }}
-                              >
-                                {part}
-                              </span>
-                              <p
-                                className="ec-body"
-                                style={{
-                                  fontSize: '11px',
-                                  lineHeight: 1.6,
-                                  color: `${cfg.color_primary}cc`,
-                                  margin: 0,
-                                }}
-                              >
-                                {members}
-                              </p>
-                            </div>
-                          ) : null
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 오케스트라 */}
-                    {cfg.orchestra_sections.length > 0 && (
-                      <div
-                        style={{
-                          paddingTop: '16px',
-                          borderTop: `1px solid rgba(255,255,255,0.06)`,
-                        }}
-                      >
-                        <p
-                          className="ec-body"
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            color: cfg.color_tertiary,
-                            marginBottom: '12px',
-                          }}
-                        >
-                          Orchestra ({cfg.orchestra_label})
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {[
+                      { role: 'Conductor', name: cfg.conductor_name },
+                      { role: 'Piano', name: cfg.pianist_name },
+                      ...(cfg.organist_name ? [{ role: 'Organ', name: cfg.organist_name }] : []),
+                    ].map(({ role, name }) => name ? (
+                      <div key={role}>
+                        <span className="ec-body" style={{ display: 'block', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: `${cfg.color_tertiary}bb`, marginBottom: '3px' }}>
+                          {role}
+                        </span>
+                        <p className="ec-body" style={{ fontSize: '11px', lineHeight: 1.6, color: `${cfg.color_primary}cc`, margin: 0 }}>
+                          {name}
                         </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {cfg.orchestra_sections.map((sec, idx) => (
-                            <div key={idx}>
-                              <span
-                                className="ec-body"
-                                style={{
-                                  display: 'block',
-                                  fontSize: '9px',
-                                  fontWeight: 700,
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.08em',
-                                  color: `${cfg.color_tertiary}bb`,
-                                  marginBottom: '3px',
-                                }}
-                              >
-                                {sec.section}
-                              </span>
-                              <p
-                                className="ec-body"
-                                style={{
-                                  fontSize: '11px',
-                                  lineHeight: 1.6,
-                                  color: `${cfg.color_primary}cc`,
-                                  margin: 0,
-                                }}
-                              >
-                                {sec.members}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
                       </div>
-                    )}
+                    ) : null)}
                   </div>
                 </div>
+
+                {/* 합창 */}
+                <div style={{ paddingTop: '16px', borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+                  <p className="ec-body" style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: cfg.color_tertiary, marginBottom: '12px' }}>
+                    Choir ({cfg.choir_label})
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {[
+                      { part: 'Soprano', members: cfg.soprano },
+                      { part: 'Alto', members: cfg.alto },
+                      { part: 'Tenor', members: cfg.tenor },
+                      { part: 'Bass', members: cfg.bass },
+                    ].map(({ part, members }) => members ? (
+                      <div key={part}>
+                        <span className="ec-body" style={{ display: 'block', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: `${cfg.color_tertiary}bb`, marginBottom: '3px' }}>
+                          {part}
+                        </span>
+                        <p className="ec-body" style={{ fontSize: '11px', lineHeight: 1.6, color: `${cfg.color_primary}cc`, margin: 0 }}>
+                          {members}
+                        </p>
+                      </div>
+                    ) : null)}
+                  </div>
+                </div>
+
+                {/* 오케스트라 */}
+                {cfg.orchestra_sections.length > 0 && (
+                  <div style={{ paddingTop: '16px', borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+                    <p className="ec-body" style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: cfg.color_tertiary, marginBottom: '12px' }}>
+                      Orchestra ({cfg.orchestra_label})
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {cfg.orchestra_sections.map((sec, idx) => (
+                        <div key={idx}>
+                          <span className="ec-body" style={{ display: 'block', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: `${cfg.color_tertiary}bb`, marginBottom: '3px' }}>
+                            {sec.section}
+                          </span>
+                          <p className="ec-body" style={{ fontSize: '11px', lineHeight: 1.6, color: `${cfg.color_primary}cc`, margin: 0 }}>
+                            {sec.members}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>
