@@ -223,6 +223,14 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [pageTheme, setPageTheme] = useState<string | null>(page.theme ?? null)
+  const [pageTitle, setPageTitle] = useState(page.title)
+  const [pageShowHeader, setPageShowHeader] = useState(page.show_header !== false)
+  const [pagePadding, setPagePadding] = useState({
+    top: page.padding_top ?? 20,
+    right: page.padding_right ?? 20,
+    bottom: page.padding_bottom ?? 20,
+    left: page.padding_left ?? 20,
+  })
   const [containerWidth, setContainerWidth] = useState(800)
   const [dropError, setDropError] = useState<string | null>(null)
 
@@ -434,6 +442,27 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
     await supabase.from('pages').update({ theme: themeId }).eq('id', page.id)
   }
 
+  const handleTitleChange = async (title: string) => {
+    setPageTitle(title)
+    await supabase.from('pages').update({ title }).eq('id', page.id)
+  }
+
+  const handleShowHeaderChange = async (show: boolean) => {
+    setPageShowHeader(show)
+    await supabase.from('pages').update({ show_header: show }).eq('id', page.id)
+  }
+
+  const handlePaddingChange = async (side: 'top' | 'right' | 'bottom' | 'left', value: number) => {
+    const next = { ...pagePadding, [side]: value }
+    setPagePadding(next)
+    await supabase.from('pages').update({
+      padding_top: next.top,
+      padding_right: next.right,
+      padding_bottom: next.bottom,
+      padding_left: next.left,
+    }).eq('id', page.id)
+  }
+
   const handleSwapPosition = useCallback(async (compId: string, direction: 'up' | 'down') => {
     const sorted = [...components]
       .map(c => {
@@ -530,7 +559,7 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
             background: 'var(--bg-primary)', flexWrap: 'wrap', gap: '8px',
           }}>
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{page.title}</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{pageTitle}</div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>/{page.slug} · {COLS}열 × {MAX_ROWS}행</div>
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -860,12 +889,92 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <ThemeSelector value={pageTheme} onChange={handleThemeChange} />
-                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', paddingTop: '16px' }}>
-                    <div style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.35 }}>⚙️</div>
-                    <p style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>컴포넌트를 선택하면</p>
-                    <p style={{ fontSize: '12px', lineHeight: 1.6 }}>크기와 설정을 변경할 수 있습니다</p>
+                  {/* 페이지 타이틀 */}
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>페이지 타이틀</div>
+                    <input
+                      type="text"
+                      className="input"
+                      value={pageTitle}
+                      onChange={e => handleTitleChange(e.target.value)}
+                      placeholder="페이지 제목"
+                      style={{ width: '100%', fontSize: '13px' }}
+                    />
                   </div>
+
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+
+                  {/* 헤더 표시 여부 */}
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>페이지 헤더</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="checkbox"
+                        id="page-show-header"
+                        checked={pageShowHeader}
+                        onChange={e => handleShowHeaderChange(e.target.checked)}
+                        style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
+                      />
+                      <label htmlFor="page-show-header" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>헤더 표시</label>
+                    </div>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+                      비활성 시 페이지 상단의 타이틀 바가 숨겨집니다
+                    </p>
+                  </div>
+
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+
+                  {/* 페이지 여백 */}
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>페이지 여백 (px)</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      {(['top', 'right', 'bottom', 'left'] as const).map(side => (
+                        <div key={side} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <label style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{side}</label>
+                          <input
+                            type="number"
+                            className="input"
+                            value={pagePadding[side]}
+                            onChange={e => handlePaddingChange(side, Math.max(0, parseInt(e.target.value) || 0))}
+                            min={0}
+                            max={200}
+                            style={{ width: '100%', fontSize: '13px', padding: '6px 8px' }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                      {[
+                        { label: '없음', values: { top: 0, right: 0, bottom: 0, left: 0 } },
+                        { label: '좁게', values: { top: 10, right: 10, bottom: 10, left: 10 } },
+                        { label: '기본', values: { top: 20, right: 20, bottom: 20, left: 20 } },
+                        { label: '넓게', values: { top: 40, right: 40, bottom: 40, left: 40 } },
+                      ].map(preset => (
+                        <button
+                          key={preset.label}
+                          onClick={async () => {
+                            setPagePadding(preset.values)
+                            await supabase.from('pages').update({
+                              padding_top: preset.values.top,
+                              padding_right: preset.values.right,
+                              padding_bottom: preset.values.bottom,
+                              padding_left: preset.values.left,
+                            }).eq('id', page.id)
+                          }}
+                          style={{
+                            padding: '4px 10px', fontSize: '11px', fontWeight: 600,
+                            background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
+                            border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer',
+                          }}
+                        >{preset.label}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+
+                  {/* 테마 */}
+                  <ThemeSelector value={pageTheme} onChange={handleThemeChange} />
                 </div>
               )}
             </div>

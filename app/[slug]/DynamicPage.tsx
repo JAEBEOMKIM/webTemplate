@@ -214,35 +214,42 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
     ? Math.max(...components.map(c => (c.grid_y ?? 0) + (c.grid_h ?? 6)))
     : 0
 
+  const showHeader = page.show_header !== false
+  const pt = page.padding_top ?? 20
+  const pr = page.padding_right ?? 20
+  const pb = page.padding_bottom ?? 20
+  const pl = page.padding_left ?? 20
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
       {/* Page header */}
-      <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-primary)', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(12px)' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 20px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{page.title}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Authenticated user profile */}
-            {user && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <UserAvatar user={user} size={26} />
-                {user.full_name && (
-                  <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {user.full_name}
-                  </span>
-                )}
-                {user.provider && PROVIDER_LABELS[user.provider] && (
-                  <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '1px 6px' }}>
-                    {PROVIDER_LABELS[user.provider]}
-                  </span>
-                )}
-              </div>
-            )}
-            <ThemeToggle />
+      {showHeader && (
+        <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-primary)', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(12px)' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 20px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h1 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{page.title}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {user && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <UserAvatar user={user} size={26} />
+                  {user.full_name && (
+                    <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user.full_name}
+                    </span>
+                  )}
+                  {user.provider && PROVIDER_LABELS[user.provider] && (
+                    <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '1px 6px' }}>
+                      {PROVIDER_LABELS[user.provider]}
+                    </span>
+                  )}
+                </div>
+              )}
+              <ThemeToggle />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: `${pt}px ${pr}px ${pb}px ${pl}px` }}>
         {page.description && (
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>{page.description}</p>
         )}

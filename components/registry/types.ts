@@ -108,6 +108,11 @@ export interface PageData {
   password_hash: string | null
   is_published: boolean
   theme: string | null
+  show_header: boolean
+  padding_top: number
+  padding_right: number
+  padding_bottom: number
+  padding_left: number
   created_at: string
   updated_at: string
 }
