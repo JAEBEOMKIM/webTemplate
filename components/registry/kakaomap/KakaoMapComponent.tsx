@@ -404,7 +404,7 @@ export function KakaoMapComponent({ config }: ComponentProps) {
     : ''
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '0 10px' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: '0 20px', overflow: 'hidden' }}>
       {/* Optional title */}
       {mapTitle && (
         <div style={{ padding: '12px 14px 8px', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0 }}>

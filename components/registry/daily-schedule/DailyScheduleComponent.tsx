@@ -112,9 +112,15 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
       const container = containerRef.current
       if (!container || sorted.length === 0) return
 
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const maxScroll = scrollHeight - clientHeight
       const containerRect = container.getBoundingClientRect()
-      // 포커스 포인트: 컨테이너 높이의 40% 지점
-      const centerY = containerRect.top + containerRect.height * 0.4
+
+      // 포커스 포인트를 스크롤 위치에 따라 동적으로 이동
+      // 최상단(0%) → 컨테이너 상단(20%), 최하단(100%) → 컨테이너 하단(80%)
+      const scrollRatio = maxScroll > 0 ? scrollTop / maxScroll : 0
+      const focusRatio = 0.2 + scrollRatio * 0.6
+      const centerY = containerRect.top + containerRect.height * focusRatio
 
       let closest = 0
       let minDist = Infinity
