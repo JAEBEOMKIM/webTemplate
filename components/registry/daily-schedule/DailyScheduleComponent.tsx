@@ -128,9 +128,16 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
       const container = containerRef.current
       if (!container || sorted.length === 0) return
 
-      // 스크롤이 끝에 도달했는지 확인 (2px 여유)
-      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 2
-      if (atBottom) {
+      const { scrollTop, scrollHeight, clientHeight } = container
+
+      // 스크롤 최상단 → 첫 번째 일정
+      if (scrollTop < 2) {
+        setActiveIndex(0)
+        return
+      }
+
+      // 스크롤 최하단 → 마지막 일정
+      if (scrollHeight - scrollTop - clientHeight < 2) {
         setActiveIndex(sorted.length - 1)
         return
       }

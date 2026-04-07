@@ -26,6 +26,9 @@ interface CardBannerConfig {
   layout?: 'stack' | 'grid' | 'carousel'
   columns?: number
   gap?: number
+  fontFamily?: string
+  paddingLeft?: number
+  paddingRight?: number
   cards: CardItem[]
 }
 
@@ -52,6 +55,10 @@ export function TextCardBannerComponent({ config }: ComponentProps) {
   const layout = c.layout || 'stack'
   const columns = c.columns || 2
   const gap = c.gap ?? 24
+
+  const fontFamily = c.fontFamily || undefined
+  const pl = c.paddingLeft ?? 28
+  const pr = c.paddingRight ?? 28
 
   const carouselRef = useRef<HTMLDivElement>(null)
   const [carouselIdx, setCarouselIdx] = useState(0)
@@ -328,10 +335,10 @@ export function TextCardBannerComponent({ config }: ComponentProps) {
   }
 
   return (
-    <div className="tcb-root" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg-primary)' }}>
+    <div className="tcb-root" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--bg-primary)', fontFamily }}>
       {/* Header */}
       {(c.heading || c.subtitle) && (
-        <div style={{ padding: '28px 28px 0', flexShrink: 0 }}>
+        <div style={{ padding: `28px ${pr}px 0 ${pl}px`, flexShrink: 0 }}>
           {c.heading && (
             <h1 style={{
               fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)',
@@ -350,7 +357,7 @@ export function TextCardBannerComponent({ config }: ComponentProps) {
       )}
 
       {/* Cards area */}
-      <div style={{ flex: 1, overflow: layout === 'carousel' ? 'hidden' : 'auto', padding: '20px 28px 28px' }}>
+      <div style={{ flex: 1, overflow: layout === 'carousel' ? 'hidden' : 'auto', padding: `20px ${pr}px 28px ${pl}px` }}>
         {layout === 'stack' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: `${gap}px` }}>
             {cards.map(card => renderCard(card))}
@@ -564,6 +571,30 @@ export function TextCardBannerConfigForm({ config, onChange }: ConfigFormProps) 
         <label style={labelStyle}>Gap (px)</label>
         <input type="number" className="input" value={c.gap ?? 24} min={8} max={48}
           onChange={e => set({ gap: parseInt(e.target.value) || 24 })} style={{ fontSize: '12px' }} />
+      </div>
+
+      {/* Font Family */}
+      <div>
+        <label style={labelStyle}>Font Family</label>
+        <input className="input" value={c.fontFamily || ''} placeholder="system-ui, sans-serif"
+          onChange={e => set({ fontFamily: e.target.value || undefined })} style={{ fontSize: '12px', fontFamily: 'monospace' }} />
+        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1.4 }}>
+          CSS font-family 값. 비우면 기본 폰트 사용.
+        </p>
+      </div>
+
+      {/* Horizontal Padding */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ flex: 1 }}>
+          <label style={labelStyle}>Left Padding (px)</label>
+          <input type="number" className="input" value={c.paddingLeft ?? 28} min={0} max={100}
+            onChange={e => set({ paddingLeft: parseInt(e.target.value) ?? 28 })} style={{ fontSize: '12px' }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={labelStyle}>Right Padding (px)</label>
+          <input type="number" className="input" value={c.paddingRight ?? 28} min={0} max={100}
+            onChange={e => set({ paddingRight: parseInt(e.target.value) ?? 28 })} style={{ fontSize: '12px' }} />
+        </div>
       </div>
 
       {/* Cards */}

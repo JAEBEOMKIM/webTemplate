@@ -299,10 +299,6 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
       )}
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: `${pt}px ${pr}px ${pb}px ${pl}px` }}>
-        {page.description && (
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>{page.description}</p>
-        )}
-
         {components.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🧩</div>
