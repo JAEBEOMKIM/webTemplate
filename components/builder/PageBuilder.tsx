@@ -13,6 +13,7 @@ import type {
   ResolvedComponentDefinition,
 } from '@/components/registry/types'
 import { buildGroupTree, countGroupComponents } from '@/lib/components/group-utils'
+import PopupConfigForm from '@/components/ui/popup/PopupConfigForm'
 import { ThemeSelector } from '@/components/ui/ThemeSelector'
 import { GridLayout } from 'react-grid-layout'
 import type { Layout, LayoutItem } from 'react-grid-layout'
@@ -880,6 +881,12 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                       )}
                     </div>
                   </div>
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
+                  <PopupConfigForm
+                    config={selectedComponent.config}
+                    onChange={config => handleConfigChange(selectedComponent.id, config)}
+                    resolvedRegistry={resolvedRegistry}
+                  />
                   <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
                   <selectedDef.ConfigForm
                     config={selectedComponent.config}

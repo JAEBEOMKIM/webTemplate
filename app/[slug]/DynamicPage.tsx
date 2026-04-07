@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { componentRegistry } from '@/components/registry'
-import type { PageData, PageComponentData } from '@/components/registry/types'
+import type { PageData, PageComponentData, ComponentDefinition } from '@/components/registry/types'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import PopupOverlay from '@/components/ui/popup/PopupOverlay'
+import { usePopupTriggers } from '@/components/ui/popup/usePopupTrigger'
+import type { PopupConfig } from '@/components/ui/popup/types'
 
 interface UserProfile {
   id: string
@@ -185,6 +188,61 @@ function InviteCodeGate({ page, user, onUnlock }: { page: PageData; user: UserPr
   )
 }
 
+// ── 팝업 래퍼 ─────────────────────────────────────────────────
+function ComponentCell({ comp, def, page, isAdmin, showBorder }: {
+  comp: PageComponentData; def: ComponentDefinition;
+  page: PageData; isAdmin?: boolean; showBorder: boolean
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const popups = (comp.config.popups as PopupConfig[] | undefined)
+  const { activePopup, close } = usePopupTriggers(comp.id, popups, containerRef)
+
+  const x = comp.grid_x ?? 0
+  const y = comp.grid_y ?? 0
+  const w = comp.grid_w ?? 10
+  const h = comp.grid_h ?? 6
+
+  return (
+    <>
+      <div
+        ref={containerRef}
+        className={showBorder ? 'card' : undefined}
+        style={{
+          gridColumn: `${x + 1} / span ${w}`,
+          gridRow: `${y + 1} / span ${h}`,
+          overflow: 'auto', minWidth: 0, minHeight: 0,
+          ...(showBorder ? {} : { background: 'transparent' }),
+        }}
+      >
+        <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
+      </div>
+      {activePopup && (
+        <PopupOverlay open config={activePopup} parentComponentId={comp.id} pageId={page.id} onClose={close} />
+      )}
+    </>
+  )
+}
+
+function FullPageCell({ comp, def, page, isAdmin }: {
+  comp: PageComponentData; def: ComponentDefinition;
+  page: PageData; isAdmin?: boolean
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const popups = (comp.config.popups as PopupConfig[] | undefined)
+  const { activePopup, close } = usePopupTriggers(comp.id, popups, containerRef)
+
+  return (
+    <>
+      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh' }}>
+        <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
+      </div>
+      {activePopup && (
+        <PopupOverlay open config={activePopup} parentComponentId={comp.id} pageId={page.id} onClose={close} />
+      )}
+    </>
+  )
+}
+
 // 빌더와 동일한 그리드 상수
 const GRID_COLS = 10
 const GRID_ROW_HEIGHT = 60 // px
@@ -196,16 +254,7 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
   if (fullPageComp) {
     const def = componentRegistry.get(fullPageComp.component_type)
     if (def) {
-      return (
-        <div style={{ width: '100%', minHeight: '100vh' }}>
-          <def.Component
-            componentId={fullPageComp.id}
-            config={fullPageComp.config}
-            pageId={page.id}
-            isAdmin={isAdmin}
-          />
-        </div>
-      )
+      return <FullPageCell comp={fullPageComp} def={def} page={page} isAdmin={isAdmin} />
     }
   }
 
@@ -270,31 +319,9 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
             {components.map(comp => {
               const def = componentRegistry.get(comp.component_type)
               if (!def) return null
-              const x = comp.grid_x ?? 0
-              const y = comp.grid_y ?? 0
-              const w = comp.grid_w ?? GRID_COLS
-              const h = comp.grid_h ?? 6
               const showBorder = (comp.config.show_border as boolean) !== false
               return (
-                <div
-                  key={comp.id}
-                  className={showBorder ? 'card' : undefined}
-                  style={{
-                    gridColumn: `${x + 1} / span ${w}`,
-                    gridRow: `${y + 1} / span ${h}`,
-                    overflow: 'auto',
-                    minWidth: 0,
-                    minHeight: 0,
-                    ...(showBorder ? {} : { background: 'transparent' }),
-                  }}
-                >
-                  <def.Component
-                    componentId={comp.id}
-                    config={comp.config}
-                    pageId={page.id}
-                    isAdmin={isAdmin}
-                  />
-                </div>
+                <ComponentCell key={comp.id} comp={comp} def={def} page={page} isAdmin={isAdmin} showBorder={showBorder} />
               )
             })}
           </div>

@@ -119,24 +119,37 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
     }
   }, [autoScroll, currentEventIndex])
 
-  // 스크롤 기반 활성화
+  // 스크롤 기반 활성화 (rAF 디바운스)
+  const scrollRaf = useRef(0)
   const handleScroll = useCallback(() => {
-    const container = containerRef.current
-    if (!container || sorted.length === 0) return
-    const containerRect = container.getBoundingClientRect()
-    const centerY = containerRect.top + containerRect.height * 0.4
+    if (scrollRaf.current) return
+    scrollRaf.current = requestAnimationFrame(() => {
+      scrollRaf.current = 0
+      const container = containerRef.current
+      if (!container || sorted.length === 0) return
 
-    let closest = 0
-    let minDist = Infinity
-    itemRefs.current.forEach((el, idx) => {
-      const rect = el.getBoundingClientRect()
-      const dist = Math.abs(rect.top + rect.height / 2 - centerY)
-      if (dist < minDist) {
-        minDist = dist
-        closest = idx
+      // 스크롤이 끝에 도달했는지 확인 (2px 여유)
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 2
+      if (atBottom) {
+        setActiveIndex(sorted.length - 1)
+        return
       }
+
+      const containerRect = container.getBoundingClientRect()
+      const centerY = containerRect.top + containerRect.height * 0.4
+
+      let closest = 0
+      let minDist = Infinity
+      itemRefs.current.forEach((el, idx) => {
+        const rect = el.getBoundingClientRect()
+        const dist = Math.abs(rect.top + rect.height / 2 - centerY)
+        if (dist < minDist) {
+          minDist = dist
+          closest = idx
+        }
+      })
+      setActiveIndex(closest)
     })
-    setActiveIndex(closest)
   }, [sorted.length])
 
   useEffect(() => {
@@ -144,7 +157,10 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
     if (!el) return
     el.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
-    return () => el.removeEventListener('scroll', handleScroll)
+    return () => {
+      el.removeEventListener('scroll', handleScroll)
+      if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current)
+    }
   }, [handleScroll])
 
   if (events.length === 0) {
@@ -270,8 +286,9 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
                   style={{
                     position: 'relative',
                     marginBottom: compactMode ? '12px' : '16px',
-                    transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                    transition: 'opacity 0.4s ease',
                     opacity: isPast && !isActive ? 0.5 : 1,
+                    willChange: 'opacity',
                   }}
                 >
                   {/* Timeline dot */}
@@ -283,8 +300,8 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
                     borderRadius: '50%',
                     background: isActive || isCurrent ? col.value : 'var(--bg-primary)',
                     border: isActive || isCurrent ? `2px solid ${col.value}` : '2px solid var(--border)',
-                    transition: 'all 0.3s ease',
-                    boxShadow: isActive ? `0 0 0 4px ${col.light}` : 'none',
+                    transition: 'background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease',
+                    boxShadow: isActive ? `0 0 0 4px ${col.light}` : '0 0 0 0px transparent',
                     zIndex: 2,
                   }} />
 
@@ -295,7 +312,7 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
                     top: compactMode ? '10px' : '14px',
                     width: compactMode ? '24px' : '28px',
                     textAlign: 'right',
-                    transition: 'color 0.3s ease',
+                    transition: 'color 0.4s ease',
                   }}>
                     <div style={{
                       fontSize: compactMode ? '13px' : '14px',
@@ -327,9 +344,9 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
                         : 'transparent',
                     border: `1px solid ${isActive ? 'var(--border)' : 'transparent'}`,
                     borderBottom: isActive ? `2px solid ${col.value}` : '2px solid transparent',
-                    transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+                    transition: 'background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease',
                     cursor: 'default',
-                    boxShadow: isActive ? '0 2px 12px rgba(0,0,0,0.06)' : 'none',
+                    boxShadow: isActive ? '0 2px 12px rgba(0,0,0,0.06)' : '0 0 0 rgba(0,0,0,0)',
                   }}>
                     {/* Title row */}
                     <div style={{
@@ -341,7 +358,7 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
                         fontWeight: 600,
                         color: isActive ? 'var(--text-primary)' : isPast ? 'var(--text-muted)' : 'var(--text-primary)',
                         letterSpacing: '-0.01em',
-                        transition: 'color 0.3s ease',
+                        transition: 'color 0.4s ease',
                         flex: 1,
                       }}>{ev.title}</span>
 
@@ -377,7 +394,7 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
                       <p style={{
                         fontSize: '12px', lineHeight: 1.6,
                         color: isActive ? 'var(--text-secondary)' : 'var(--text-muted)',
-                        margin: 0, transition: 'color 0.3s ease',
+                        margin: 0, transition: 'color 0.4s ease',
                         overflow: 'hidden',
                         display: '-webkit-box',
                         WebkitLineClamp: isActive ? 10 : 2,
