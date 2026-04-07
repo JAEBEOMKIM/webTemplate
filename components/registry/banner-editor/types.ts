@@ -2,7 +2,7 @@
 
 export type LayerType = 'image' | 'text'
 
-export type TextEffectType = 'none' | 'fade-in' | 'slide-up' | 'typewriter' | 'glow'
+export type TextVariantType = 'none' | 'typewriter' | 'shiny'
 
 export interface ImageLayer {
   id: string
@@ -19,14 +19,27 @@ export interface TextLayer {
   type: 'text'
   name: string
   text: string
+  // 폰트 설정 (title-header 동일)
   fontFamily: string
   fontSize: number
   fontWeight: number
-  fill: string
-  stroke: string
-  strokeWidth: number
-  hasShadow: boolean
-  textEffect: TextEffectType
+  italic: boolean
+  fill: string           // canvas 렌더링용 텍스트 색상
+  // 유형 + 관련 설정
+  variant: TextVariantType
+  // Typewriter 설정
+  texts?: string[]       // 순환 텍스트 (variant=typewriter)
+  prefix?: string        // 고정 접두어
+  typingSpeed?: number
+  deletingSpeed?: number
+  pauseDuration?: number
+  cursorChar?: string
+  cursorColor?: string
+  // Shiny 설정
+  gradientColors?: string
+  gradientSpeed?: number
+  hoverGlow?: boolean
+  // 공통
   visible: boolean
   opacity: number  // 0-100
 }

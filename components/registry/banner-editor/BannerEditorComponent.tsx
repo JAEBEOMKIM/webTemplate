@@ -5,10 +5,12 @@ import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import type { ComponentProps, ConfigFormProps } from '../types'
 import {
-  BannerConfig, Layer, ImageLayer, TextLayer, TextEffectType,
+  BannerConfig, Layer, ImageLayer, TextLayer, TextVariantType,
   DEFAULT_BANNER_CONFIG, CANVAS_PRESETS,
 } from './types'
 import { FONTS, loadAllFonts, getFontFamily } from './fonts'
+import { loadFont } from '@/lib/fonts/font-registry'
+import { FontFamilySelect } from '../shared/FontFamilySelect'
 import type { EditorCanvasRef, TextUpdateProps } from './EditorCanvas'
 
 // ── Lazy-load Fabric.js only in editor (never in display component) ───────────
@@ -25,13 +27,27 @@ const EditorCanvas = dynamic(() => import('./EditorCanvas'), {
 
 const ZOOM_LEVELS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0] as const
 
-const TEXT_EFFECTS: { value: TextEffectType; label: string }[] = [
-  { value: 'none', label: '없음' },
-  { value: 'fade-in', label: '페이드인' },
-  { value: 'slide-up', label: '슬라이드업' },
-  { value: 'typewriter', label: '타이핑' },
-  { value: 'glow', label: '빛남' },
-]
+const WEIGHT_PRESETS = [
+  { value: 100, label: 'Thin' },
+  { value: 300, label: 'Light' },
+  { value: 400, label: 'Regular' },
+  { value: 500, label: 'Medium' },
+  { value: 600, label: 'SemiBold' },
+  { value: 700, label: 'Bold' },
+  { value: 800, label: 'ExtraBold' },
+  { value: 900, label: 'Black' },
+] as const
+
+const GRADIENT_PRESETS = [
+  { id: 'silver', label: '실버', value: 'linear-gradient(90deg, #999, #fff, #999)' },
+  { id: 'gold', label: '골드', value: 'linear-gradient(90deg, #b8860b, #ffd700, #b8860b)' },
+  { id: 'ocean', label: '오션', value: 'linear-gradient(90deg, #0077b6, #90e0ef, #0077b6)' },
+  { id: 'sunset', label: '선셋', value: 'linear-gradient(90deg, #ff6b6b, #feca57, #ff6b6b)' },
+  { id: 'neon', label: '네온', value: 'linear-gradient(90deg, #a855f7, #06b6d4, #a855f7)' },
+  { id: 'rose', label: '로즈', value: 'linear-gradient(90deg, #be185d, #f9a8d4, #be185d)' },
+  { id: 'emerald', label: '에메랄드', value: 'linear-gradient(90deg, #065f46, #6ee7b7, #065f46)' },
+  { id: 'fire', label: '파이어', value: 'linear-gradient(90deg, #dc2626, #fbbf24, #dc2626)' },
+] as const
 
 // ── CSS style shorthands ──────────────────────────────────────────────────────
 
@@ -187,14 +203,24 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
   const [bgRemoving, setBgRemoving] = useState(false)
 
   // ── Text property panel state ─────────────────────────────────────────────
-  const [txtFont, setTxtFont] = useState('noto-sans-kr')
+  const [txtFontFamily, setTxtFontFamily] = useState('inherit')
   const [txtSize, setTxtSize] = useState(42)
   const [txtWeight, setTxtWeight] = useState(700)
+  const [txtItalic, setTxtItalic] = useState(false)
   const [txtColor, setTxtColor] = useState('#ffffff')
-  const [txtStroke, setTxtStroke] = useState('')
-  const [txtStrokeW, setTxtStrokeW] = useState(1)
-  const [txtShadow, setTxtShadow] = useState(false)
-  const [txtEffect, setTxtEffect] = useState<TextEffectType>('none')
+  const [txtVariant, setTxtVariant] = useState<TextVariantType>('none')
+  // Typewriter
+  const [txtTypingSpeed, setTxtTypingSpeed] = useState(80)
+  const [txtDeletingSpeed, setTxtDeletingSpeed] = useState(40)
+  const [txtPauseDuration, setTxtPauseDuration] = useState(2000)
+  const [txtCursorChar, setTxtCursorChar] = useState('|')
+  const [txtCursorColor, setTxtCursorColor] = useState('#6366f1')
+  const [txtTexts, setTxtTexts] = useState<string[]>([])
+  const [txtPrefix, setTxtPrefix] = useState('')
+  // Shiny
+  const [txtGradientColors, setTxtGradientColors] = useState<string>(GRADIENT_PRESETS[0].value)
+  const [txtGradientSpeed, setTxtGradientSpeed] = useState(2)
+  const [txtHoverGlow, setTxtHoverGlow] = useState(false)
 
   // ── Scale canvas to fit container (ResizeObserver) ─────────────────────────
   useEffect(() => {
@@ -268,14 +294,22 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
     if (type === 'text' && id) {
       const layer = layers.find(l => l.id === id) as TextLayer | undefined
       if (layer) {
-        setTxtFont(FONTS.find(f => f.family === layer.fontFamily)?.key ?? 'noto-sans-kr')
+        setTxtFontFamily(layer.fontFamily || 'inherit')
         setTxtSize(layer.fontSize)
         setTxtWeight(layer.fontWeight)
+        setTxtItalic(layer.italic ?? false)
         setTxtColor(layer.fill)
-        setTxtStroke(layer.stroke)
-        setTxtStrokeW(layer.strokeWidth)
-        setTxtShadow(layer.hasShadow)
-        setTxtEffect(layer.textEffect)
+        setTxtVariant(layer.variant || 'none')
+        setTxtTexts(layer.texts || [])
+        setTxtPrefix(layer.prefix || '')
+        setTxtTypingSpeed(layer.typingSpeed ?? 80)
+        setTxtDeletingSpeed(layer.deletingSpeed ?? 40)
+        setTxtPauseDuration(layer.pauseDuration ?? 2000)
+        setTxtCursorChar(layer.cursorChar || '|')
+        setTxtCursorColor(layer.cursorColor || '#6366f1')
+        setTxtGradientColors(layer.gradientColors || GRADIENT_PRESETS[0].value)
+        setTxtGradientSpeed(layer.gradientSpeed ?? 2)
+        setTxtHoverGlow(layer.hoverGlow ?? false)
       }
       setActiveTab('props')
     }
@@ -418,17 +452,16 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
       id, type: 'text',
       name: `텍스트 ${layers.filter(l => l.type === 'text').length + 1}`,
       text: '텍스트를 입력하세요',
-      fontFamily, fontSize: 42, fontWeight: 700,
-      fill: '#ffffff', stroke: '', strokeWidth: 1,
-      hasShadow: false, textEffect: 'none',
+      fontFamily, fontSize: 42, fontWeight: 700, italic: false,
+      fill: '#ffffff', variant: 'none',
       visible: true, opacity: 100,
     }
     updateLayers([...layers, newLayer])
     setSelectedLayerId(id)
     setSelectedType('text')
-    setTxtFont('noto-sans-kr')
-    setTxtSize(42); setTxtWeight(700); setTxtColor('#ffffff')
-    setTxtStroke(''); setTxtStrokeW(1); setTxtShadow(false); setTxtEffect('none')
+    setTxtFontFamily(fontFamily)
+    setTxtSize(42); setTxtWeight(700); setTxtItalic(false); setTxtColor('#ffffff')
+    setTxtVariant('none'); setTxtTexts([]); setTxtPrefix('')
     setActiveTab('props')
   }, [layers, updateLayers])
 
@@ -467,22 +500,29 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
   }, [layers, updateLayers])
 
   // ── Text property update ──────────────────────────────────────────────────
-  const applyTextProps = useCallback((patch: Partial<TextUpdateProps> & { textEffect?: TextEffectType }) => {
+  // Canvas에 반영되는 속성만 전달 (font, fill)
+  const applyCanvasProps = useCallback((patch: Partial<TextUpdateProps>) => {
     if (!selectedLayerId) return
-    const { textEffect, ...canvasProps } = patch
-    if (Object.keys(canvasProps).length > 0) {
-      canvasRef.current?.updateTextProps(selectedLayerId, canvasProps)
+    if (Object.keys(patch).length > 0) {
+      canvasRef.current?.updateTextProps(selectedLayerId, patch)
     }
-    const layerPatch: Partial<TextLayer> = {}
-    if (canvasProps.fontFamily !== undefined) layerPatch.fontFamily = canvasProps.fontFamily
-    if (canvasProps.fontSize !== undefined) layerPatch.fontSize = canvasProps.fontSize
-    if (canvasProps.fontWeight !== undefined) layerPatch.fontWeight = canvasProps.fontWeight
-    if (canvasProps.fill !== undefined) layerPatch.fill = canvasProps.fill
-    if (canvasProps.stroke !== undefined) layerPatch.stroke = canvasProps.stroke
-    if (canvasProps.strokeWidth !== undefined) layerPatch.strokeWidth = canvasProps.strokeWidth
-    if (canvasProps.hasShadow !== undefined) layerPatch.hasShadow = canvasProps.hasShadow
-    if (textEffect !== undefined) layerPatch.textEffect = textEffect
-    updateLayers(layers.map(l => l.id === selectedLayerId ? { ...l, ...layerPatch } as Layer : l))
+  }, [selectedLayerId])
+
+  // 레이어 데이터 업데이트 (canvas + layer 모두)
+  const applyTextProps = useCallback((canvasPatch: Partial<TextUpdateProps>, layerPatch: Partial<TextLayer>) => {
+    if (!selectedLayerId) return
+    if (Object.keys(canvasPatch).length > 0) {
+      canvasRef.current?.updateTextProps(selectedLayerId, canvasPatch)
+    }
+    if (Object.keys(layerPatch).length > 0) {
+      updateLayers(layers.map(l => l.id === selectedLayerId ? { ...l, ...layerPatch } as Layer : l))
+    }
+  }, [selectedLayerId, layers, updateLayers])
+
+  // 레이어 데이터만 업데이트 (canvas 반영 불필요한 속성: variant, typewriter/shiny settings 등)
+  const updateLayerOnly = useCallback((patch: Partial<TextLayer>) => {
+    if (!selectedLayerId) return
+    updateLayers(layers.map(l => l.id === selectedLayerId ? { ...l, ...patch } as Layer : l))
   }, [selectedLayerId, layers, updateLayers])
 
   // ── Image opacity ─────────────────────────────────────────────────────────
@@ -746,95 +786,248 @@ export function BannerEditorConfigForm({ config, onChange, componentId }: Config
 
           {selectedLayer?.type === 'text' && (
             <>
+              {/* ── 폰트 설정 ── */}
               <div style={S.section}>
-                <span style={S.sectionTitle}>폰트</span>
+                <span style={S.sectionTitle}>폰트 설정</span>
+
+                {/* 글꼴 */}
+                <div>
+                  <span style={{ ...S.label, fontSize: 10 }}>글꼴</span>
+                  <FontFamilySelect
+                    value={txtFontFamily}
+                    onChange={v => {
+                      setTxtFontFamily(v)
+                      const family = v === 'inherit' ? 'sans-serif' : v
+                      loadFont(v)
+                      applyTextProps({ fontFamily: family }, { fontFamily: family })
+                    }}
+                  />
+                </div>
+
+                {/* 굵기 */}
+                <div>
+                  <span style={{ ...S.label, fontSize: 10 }}>굵기</span>
+                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                    {WEIGHT_PRESETS.map(w => (
+                      <button key={w.value} type="button"
+                        onClick={() => { setTxtWeight(w.value); applyTextProps({ fontWeight: w.value }, { fontWeight: w.value }) }}
+                        style={{ ...S.btn(txtWeight === w.value), fontSize: 10, padding: '4px 6px' }}>
+                        {w.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 이탤릭 */}
+                <div style={S.row}>
+                  <span style={{ ...S.label, fontSize: 10, marginBottom: 0 }}>이탤릭</span>
+                  <button type="button"
+                    onClick={() => {
+                      const next = !txtItalic
+                      setTxtItalic(next)
+                      applyTextProps({ fontStyle: next ? 'italic' : 'normal' }, { italic: next })
+                    }}
+                    style={{ ...S.btn(txtItalic), fontStyle: 'italic', width: 32, padding: '4px' }}>
+                    I
+                  </button>
+                </div>
+
+                {/* 글자 크기 */}
+                <div>
+                  <span style={{ ...S.label, fontSize: 10 }}>글자 크기</span>
+                  <input type="range" min={10} max={200} step={2}
+                    value={txtSize}
+                    onChange={e => { setTxtSize(Number(e.target.value)); applyTextProps({ fontSize: Number(e.target.value) }, { fontSize: Number(e.target.value) }) }}
+                    style={{ accentColor: 'var(--accent)', width: '100%' }}
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{txtSize}px</span>
+                </div>
+
+                {/* 텍스트 색상 */}
+                <div>
+                  <span style={{ ...S.label, fontSize: 10 }}>텍스트 색상</span>
+                  <div style={{ ...S.row, gap: 5 }}>
+                    <input type="color" value={txtColor}
+                      onChange={e => { setTxtColor(e.target.value); applyTextProps({ fill: e.target.value }, { fill: e.target.value }) }}
+                      style={{ width: 40, height: 32, border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', padding: 1 }}
+                    />
+                    <button type="button" onClick={() => { setTxtColor('#ffffff'); applyTextProps({ fill: '#ffffff' }, { fill: '#ffffff' }) }}
+                      style={{ ...S.btn(false), fontSize: 10 }}>기본값</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── 유형 ── */}
+              <div style={S.section}>
+                <span style={S.sectionTitle}>유형</span>
                 <select
-                  value={txtFont}
+                  value={txtVariant}
                   onChange={e => {
-                    const key = e.target.value
-                    setTxtFont(key)
-                    applyTextProps({ fontFamily: getFontFamily(key) })
+                    const v = e.target.value as TextVariantType
+                    setTxtVariant(v)
+                    updateLayerOnly({ variant: v })
                   }}
-                  style={{ width: '100%', padding: '6px 8px', fontSize: 12, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)' }}
+                  style={{ width: '100%', padding: '6px 8px', fontSize: 12, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)', cursor: 'pointer' }}
                 >
-                  {FONTS.map(f => <option key={f.key} value={f.key}>{f.name}</option>)}
+                  <option value="none">없음 (기본 텍스트)</option>
+                  <option value="typewriter">Typewriter (타이프라이터)</option>
+                  <option value="shiny">Shiny Text (빛나는 텍스트)</option>
                 </select>
               </div>
 
-              <div style={S.section}>
-                <span style={S.sectionTitle}>크기 {txtSize}px · 굵기</span>
-                <input type="range" min={10} max={200} step={2}
-                  value={txtSize}
-                  onChange={e => { setTxtSize(Number(e.target.value)); applyTextProps({ fontSize: Number(e.target.value) }) }}
-                  style={{ accentColor: 'var(--accent)', width: '100%' }}
-                />
-                <div style={{ ...S.row, gap: 5 }}>
-                  {[700, 400].map(w => (
-                    <button key={w} type="button"
-                      onClick={() => { setTxtWeight(w); applyTextProps({ fontWeight: w }) }}
-                      style={S.btn(txtWeight === w)}>
-                      {w === 700 ? '굵게' : '보통'}
+              {/* ── 타이프라이터 설정 ── */}
+              {txtVariant === 'typewriter' && (
+                <div style={S.section}>
+                  <span style={S.sectionTitle}>타이프라이터 설정</span>
+
+                  {/* 고정 접두어 */}
+                  <div>
+                    <span style={{ ...S.label, fontSize: 10 }}>고정 접두어</span>
+                    <input
+                      value={txtPrefix}
+                      onChange={e => { setTxtPrefix(e.target.value); updateLayerOnly({ prefix: e.target.value }) }}
+                      placeholder="예: We build"
+                      style={{ width: '100%', padding: '6px 8px', fontSize: 12, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* 순환 텍스트 */}
+                  <div>
+                    <span style={{ ...S.label, fontSize: 10 }}>타이핑 텍스트 (순환)</span>
+                    {txtTexts.map((t, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                        <input
+                          value={t}
+                          onChange={e => {
+                            const next = [...txtTexts]; next[i] = e.target.value
+                            setTxtTexts(next); updateLayerOnly({ texts: next })
+                          }}
+                          placeholder={`텍스트 ${i + 1}`}
+                          style={{ flex: 1, padding: '5px 8px', fontSize: 12, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)' }}
+                        />
+                        {txtTexts.length > 1 && (
+                          <button type="button"
+                            onClick={() => { const next = txtTexts.filter((_, j) => j !== i); setTxtTexts(next); updateLayerOnly({ texts: next }) }}
+                            style={{ ...S.btn(false), color: 'var(--danger)', padding: '4px 8px' }}>×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button"
+                      onClick={() => { const next = [...txtTexts, '']; setTxtTexts(next); updateLayerOnly({ texts: next }) }}
+                      style={{ ...S.btn(false), fontSize: 10 }}>+ 텍스트 추가</button>
+                  </div>
+
+                  {/* 속도 설정 */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div>
+                      <span style={{ ...S.label, fontSize: 10 }}>타이핑 속도 (ms)</span>
+                      <input type="number" min={10} max={500} step={10}
+                        value={txtTypingSpeed}
+                        onChange={e => { const v = Math.max(10, parseInt(e.target.value) || 80); setTxtTypingSpeed(v); updateLayerOnly({ typingSpeed: v }) }}
+                        style={{ width: '100%', padding: '5px 8px', fontSize: 12, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                    <div>
+                      <span style={{ ...S.label, fontSize: 10 }}>삭제 속도 (ms)</span>
+                      <input type="number" min={10} max={300} step={10}
+                        value={txtDeletingSpeed}
+                        onChange={e => { const v = Math.max(10, parseInt(e.target.value) || 40); setTxtDeletingSpeed(v); updateLayerOnly({ deletingSpeed: v }) }}
+                        style={{ width: '100%', padding: '5px 8px', fontSize: 12, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <span style={{ ...S.label, fontSize: 10 }}>대기 시간 (ms)</span>
+                    <input type="number" min={500} max={10000} step={100}
+                      value={txtPauseDuration}
+                      onChange={e => { const v = Math.max(500, parseInt(e.target.value) || 2000); setTxtPauseDuration(v); updateLayerOnly({ pauseDuration: v }) }}
+                      style={{ width: '100%', padding: '5px 8px', fontSize: 12, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* 커서 색상 */}
+                  <div style={S.row}>
+                    <span style={{ ...S.label, fontSize: 10, marginBottom: 0 }}>커서 색상</span>
+                    <input type="color" value={txtCursorColor}
+                      onChange={e => { setTxtCursorColor(e.target.value); updateLayerOnly({ cursorColor: e.target.value }) }}
+                      style={{ width: 32, height: 28, border: 'none', cursor: 'pointer', borderRadius: 4 }}
+                    />
+                    <button type="button" onClick={() => { setTxtCursorColor('#6366f1'); updateLayerOnly({ cursorColor: '' }) }}
+                      style={{ ...S.btn(false), fontSize: 10 }}>기본값</button>
+                  </div>
+
+                  {/* 커서 문자 */}
+                  <div>
+                    <span style={{ ...S.label, fontSize: 10 }}>커서 문자</span>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {['|', '▎', '█', '_', '▏'].map(c => (
+                        <button key={c} type="button"
+                          onClick={() => { setTxtCursorChar(c); updateLayerOnly({ cursorChar: c }) }}
+                          style={{ ...S.btn(txtCursorChar === c), width: 32, fontSize: 14 }}>{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── 빛나는 텍스트 설정 ── */}
+              {txtVariant === 'shiny' && (
+                <div style={S.section}>
+                  <span style={S.sectionTitle}>빛나는 텍스트 설정</span>
+
+                  {/* 그라디언트 프리셋 */}
+                  <div>
+                    <span style={{ ...S.label, fontSize: 10 }}>그라디언트 프리셋</span>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {GRADIENT_PRESETS.map(g => (
+                        <button key={g.id} type="button"
+                          onClick={() => { setTxtGradientColors(g.value); updateLayerOnly({ gradientColors: g.value }) }}
+                          title={g.label}
+                          style={{
+                            width: 36, height: 24, borderRadius: 6,
+                            background: g.value, backgroundSize: '200% auto',
+                            border: txtGradientColors === g.value ? '2px solid var(--accent)' : '2px solid transparent',
+                            cursor: 'pointer',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 커스텀 그라디언트 */}
+                  <div>
+                    <span style={{ ...S.label, fontSize: 10 }}>커스텀 그라디언트 CSS</span>
+                    <input
+                      value={txtGradientColors}
+                      onChange={e => { setTxtGradientColors(e.target.value); updateLayerOnly({ gradientColors: e.target.value }) }}
+                      placeholder="linear-gradient(90deg, #000, #fff, #000)"
+                      style={{ width: '100%', padding: '5px 8px', fontSize: 11, fontFamily: 'monospace', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* 애니메이션 속도 */}
+                  <div>
+                    <span style={{ ...S.label, fontSize: 10 }}>애니메이션 속도 (초)</span>
+                    <input type="range" min={0.5} max={8} step={0.5}
+                      value={txtGradientSpeed}
+                      onChange={e => { const v = parseFloat(e.target.value); setTxtGradientSpeed(v); updateLayerOnly({ gradientSpeed: v }) }}
+                      style={{ width: '100%', accentColor: 'var(--accent)' }}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{txtGradientSpeed}s</span>
+                  </div>
+
+                  {/* 호버 글로우 */}
+                  <div style={S.row}>
+                    <span style={{ ...S.label, fontSize: 10, marginBottom: 0 }}>호버 글로우</span>
+                    <button type="button"
+                      onClick={() => { const next = !txtHoverGlow; setTxtHoverGlow(next); updateLayerOnly({ hoverGlow: next }) }}
+                      style={{ ...S.btn(txtHoverGlow), padding: '4px 10px', fontSize: 10 }}>
+                      {txtHoverGlow ? 'ON' : 'OFF'}
                     </button>
-                  ))}
+                  </div>
                 </div>
-              </div>
-
-              <div style={S.section}>
-                <span style={S.sectionTitle}>글자 색상</span>
-                <div style={{ ...S.row, flexWrap: 'wrap', gap: 5 }}>
-                  <input type="color" value={txtColor}
-                    onChange={e => { setTxtColor(e.target.value); applyTextProps({ fill: e.target.value }) }}
-                    style={{ width: 40, height: 32, border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', padding: 1 }}
-                  />
-                  {['#ffffff','#000000','#f8fafc','#1e293b','#3b82f6','#ef4444','#f59e0b','#22c55e'].map(c => (
-                    <button key={c} type="button" onClick={() => { setTxtColor(c); applyTextProps({ fill: c }) }}
-                      style={{ width: 22, height: 22, background: c, border: `2px solid ${txtColor === c ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 4, cursor: 'pointer' }} />
-                  ))}
-                </div>
-              </div>
-
-              <div style={S.section}>
-                <span style={S.sectionTitle}>외곽선</span>
-                <div style={{ ...S.row, gap: 8 }}>
-                  <input type="color" value={txtStroke || '#000000'}
-                    onChange={e => { setTxtStroke(e.target.value); applyTextProps({ stroke: e.target.value, strokeWidth: txtStrokeW }) }}
-                    style={{ width: 40, height: 32, border: '1px solid var(--border)', borderRadius: 5, cursor: 'pointer', padding: 1 }}
-                  />
-                  <input type="range" min={0} max={10} step={0.5}
-                    value={txtStrokeW}
-                    onChange={e => { setTxtStrokeW(Number(e.target.value)); applyTextProps({ stroke: txtStroke || '#000000', strokeWidth: Number(e.target.value) }) }}
-                    style={{ flex: 1, accentColor: 'var(--accent)' }}
-                  />
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 28 }}>{txtStrokeW}px</span>
-                  <button type="button" onClick={() => { setTxtStroke(''); applyTextProps({ stroke: '', strokeWidth: 0 }) }}
-                    style={{ fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>제거</button>
-                </div>
-              </div>
-
-              <div style={S.section}>
-                <span style={S.sectionTitle}>그림자</span>
-                <div style={S.row}>
-                  <input type="checkbox" id="txt-shadow" checked={txtShadow}
-                    onChange={e => { setTxtShadow(e.target.checked); applyTextProps({ hasShadow: e.target.checked, shadowColor: 'rgba(0,0,0,0.6)' }) }}
-                    style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
-                  />
-                  <label htmlFor="txt-shadow" style={{ fontSize: 12, cursor: 'pointer', color: 'var(--text-primary)' }}>그림자 효과</label>
-                </div>
-              </div>
-
-              <div style={S.section}>
-                <span style={S.sectionTitle}>애니메이션 효과</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {TEXT_EFFECTS.map(({ value, label }) => (
-                    <button key={value} type="button"
-                      onClick={() => { setTxtEffect(value); applyTextProps({ textEffect: value }) }}
-                      style={S.btn(txtEffect === value)}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>효과는 배너 표시 시 적용됩니다 (저장 후 확인).</p>
-              </div>
+              )}
             </>
           )}
         </div>

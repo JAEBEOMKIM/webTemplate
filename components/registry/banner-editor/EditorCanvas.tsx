@@ -4,7 +4,7 @@
 // Loaded via next/dynamic({ ssr: false }) in BannerEditorComponent
 
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
-import { Canvas, FabricImage, IText, Shadow } from 'fabric'
+import { Canvas, FabricImage, IText } from 'fabric'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -12,11 +12,8 @@ export interface TextUpdateProps {
   fontFamily?: string
   fontSize?: number
   fontWeight?: number
+  fontStyle?: string  // 'italic' | 'normal'
   fill?: string
-  stroke?: string
-  strokeWidth?: number
-  hasShadow?: boolean
-  shadowColor?: string
 }
 
 export interface EditorCanvasRef {
@@ -311,17 +308,8 @@ const EditorCanvas = forwardRef<EditorCanvasRef, EditorCanvasProps>(
         if (props.fontFamily !== undefined) itext.set({ fontFamily: props.fontFamily })
         if (props.fontSize !== undefined) itext.set({ fontSize: props.fontSize })
         if (props.fontWeight !== undefined) itext.set({ fontWeight: props.fontWeight } as Parameters<typeof itext.set>[0])
+        if (props.fontStyle !== undefined) itext.set({ fontStyle: props.fontStyle } as Parameters<typeof itext.set>[0])
         if (props.fill !== undefined) itext.set({ fill: props.fill })
-        if (props.stroke !== undefined) itext.set({ stroke: props.stroke })
-        if (props.strokeWidth !== undefined) itext.set({ strokeWidth: props.strokeWidth } as Parameters<typeof itext.set>[0])
-        if (props.hasShadow !== undefined) {
-          if (props.hasShadow) {
-            const color = props.shadowColor ?? 'rgba(0,0,0,0.5)'
-            itext.set({ shadow: new Shadow({ color, blur: 8, offsetX: 2, offsetY: 2 }) })
-          } else {
-            itext.set({ shadow: undefined })
-          }
-        }
         cv.requestRenderAll()
         onModified?.()
       },
