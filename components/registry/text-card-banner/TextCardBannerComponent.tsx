@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import type { ComponentProps, ConfigFormProps } from '../types'
+import { loadFont } from '@/lib/fonts/font-registry'
+import { FontFamilySelect } from '../shared/FontFamilySelect'
 
 // ── Types ────────────────────────────────────────────────────
 interface CardItem {
@@ -63,6 +65,7 @@ export function TextCardBannerComponent({ config }: ComponentProps) {
   const carouselRef = useRef<HTMLDivElement>(null)
   const [carouselIdx, setCarouselIdx] = useState(0)
 
+  useEffect(() => { if (fontFamily) loadFont(fontFamily) }, [fontFamily])
   useEffect(() => { setCarouselIdx(0) }, [cards.length])
 
   if (cards.length === 0) {
@@ -575,12 +578,11 @@ export function TextCardBannerConfigForm({ config, onChange }: ConfigFormProps) 
 
       {/* Font Family */}
       <div>
-        <label style={labelStyle}>Font Family</label>
-        <input className="input" value={c.fontFamily || ''} placeholder="system-ui, sans-serif"
-          onChange={e => set({ fontFamily: e.target.value || undefined })} style={{ fontSize: '12px', fontFamily: 'monospace' }} />
-        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1.4 }}>
-          CSS font-family 값. 비우면 기본 폰트 사용.
-        </p>
+        <label style={labelStyle}>글꼴</label>
+        <FontFamilySelect
+          value={c.fontFamily || 'inherit'}
+          onChange={v => set({ fontFamily: v === 'inherit' ? undefined : v })}
+        />
       </div>
 
       {/* Horizontal Padding */}
