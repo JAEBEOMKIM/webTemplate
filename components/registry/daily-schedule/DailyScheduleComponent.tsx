@@ -72,7 +72,6 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
   const title = (config.title as string) || ''
   const events = (config.events as ScheduleEvent[]) || []
   const showCurrentTime = config.show_current_time !== false
-  const autoScroll = config.auto_scroll !== false
   const compactMode = config.compact_mode === true
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -80,7 +79,6 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
   const [hoveredIndex, setHoveredIndex] = useState(-1)
   const [nowMinutes, setNowMinutes] = useState(getNowMinutes)
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map())
-  const hasAutoScrolled = useRef(false)
 
   const sorted = useMemo(() =>
     [...events].sort((a, b) => parseMinutes(a.time) - parseMinutes(b.time)),
@@ -94,30 +92,16 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
     return () => clearInterval(id)
   }, [showCurrentTime])
 
-  // 현재/다음 이벤트 계산
+  // 현재 진행 중인 이벤트 (시간 범위에 포함될 때만)
   const currentEventIndex = useMemo(() => {
     if (sorted.length === 0) return -1
     for (let i = sorted.length - 1; i >= 0; i--) {
-      const end = sorted[i].endTime ? parseMinutes(sorted[i].endTime!) : parseMinutes(sorted[i].time) + 60
-      if (nowMinutes >= parseMinutes(sorted[i].time) && nowMinutes < end) return i
+      const start = parseMinutes(sorted[i].time)
+      const end = sorted[i].endTime ? parseMinutes(sorted[i].endTime!) : start + 60
+      if (nowMinutes >= start && nowMinutes < end) return i
     }
-    for (let i = 0; i < sorted.length; i++) {
-      if (parseMinutes(sorted[i].time) > nowMinutes) return i
-    }
-    return sorted.length - 1
+    return -1
   }, [sorted, nowMinutes])
-
-  // 자동 스크롤
-  useEffect(() => {
-    if (!autoScroll || hasAutoScrolled.current || currentEventIndex < 0) return
-    hasAutoScrolled.current = true
-    const el = itemRefs.current.get(currentEventIndex)
-    if (el && containerRef.current) {
-      requestAnimationFrame(() => {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      })
-    }
-  }, [autoScroll, currentEventIndex])
 
   // 스크롤 기반 활성화 (rAF 디바운스)
   const scrollRaf = useRef(0)
@@ -128,21 +112,8 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
       const container = containerRef.current
       if (!container || sorted.length === 0) return
 
-      const { scrollTop, scrollHeight, clientHeight } = container
-
-      // 스크롤 최상단 → 첫 번째 일정
-      if (scrollTop < 2) {
-        setActiveIndex(0)
-        return
-      }
-
-      // 스크롤 최하단 → 마지막 일정
-      if (scrollHeight - scrollTop - clientHeight < 2) {
-        setActiveIndex(sorted.length - 1)
-        return
-      }
-
       const containerRect = container.getBoundingClientRect()
+      // 포커스 포인트: 컨테이너 높이의 40% 지점
       const centerY = containerRect.top + containerRect.height * 0.4
 
       let closest = 0
@@ -502,7 +473,6 @@ export function DailyScheduleConfigForm({ config, onChange }: ConfigFormProps) {
         <label style={labelStyle}>옵션</label>
         {[
           { key: 'show_current_time', label: '현재 시간 표시', defaultVal: true },
-          { key: 'auto_scroll', label: '현재 일정으로 자동 스크롤', defaultVal: true },
           { key: 'compact_mode', label: '컴팩트 모드', defaultVal: false },
         ].map(opt => (
           <div key={opt.key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
