@@ -98,7 +98,6 @@ export function PlaceDetailComponent({ componentId, pageId, config, isAdmin }: C
             height: `${(cfg.gallery_config as { height?: number })?.height ?? 320}px`,
             borderRadius: '12px',
             overflow: 'hidden',
-            border: '1px solid var(--border)',
           }}>
             <ImageGalleryComponent
               componentId={`${componentId}-gallery`}
@@ -122,7 +121,6 @@ export function PlaceDetailComponent({ componentId, pageId, config, isAdmin }: C
             height: `${(cfg.map_config as { height?: number })?.height ?? 240}px`,
             borderRadius: '12px',
             overflow: 'hidden',
-            border: '1px solid var(--border)',
           }}>
             <KakaoMapComponent
               componentId={`${componentId}-map`}
@@ -694,6 +692,7 @@ function MapConfigEditor({ value, onChange }: {
     height?: number
     map_type?: 'ROADMAP' | 'SKYVIEW' | 'HYBRID'
     show_controls?: boolean
+    is_fixed?: boolean
     markers?: Array<{ id: string; lat: number; lng: number; title: string; description?: string }>
   }
   const markers = v.markers ?? []
@@ -747,6 +746,12 @@ function MapConfigEditor({ value, onChange }: {
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
             <input type="checkbox" checked={v.show_controls !== false} onChange={e => update({ show_controls: e.target.checked })} />
             컨트롤 표시
+          </label>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '4px', gridColumn: '1 / -1' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }} title="활성화 시 드래그/스크롤 휠/더블클릭 줌이 모두 비활성됩니다">
+            <input type="checkbox" checked={v.is_fixed === true} onChange={e => update({ is_fixed: e.target.checked })} />
+            🔒 위치 고정 (드래그/스크롤 휠/줌 비활성)
           </label>
         </div>
       </div>

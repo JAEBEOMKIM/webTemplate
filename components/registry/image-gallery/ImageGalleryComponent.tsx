@@ -47,7 +47,8 @@ export function ImageGalleryComponent({ config }: ComponentProps) {
 
   useGalleryKeyframes()
 
-  const title       = (config.title as string) || '갤러리'
+  // 빈 문자열이면 제목 비표시 (PlaceDetail 등 외부 섹션 제목과 중복 방지)
+  const title       = typeof config.title === 'string' ? config.title : '갤러리'
   const autoplay    = (config.autoplay as boolean) !== false
   const interval    = (config.interval as number) || 3000
   const images      = (config.images as GalleryImage[]) || []
@@ -74,7 +75,7 @@ export function ImageGalleryComponent({ config }: ComponentProps) {
     return (
       <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
         <div style={{ fontSize: '40px', marginBottom: '8px' }}>🖼️</div>
-        <p style={{ fontWeight: 600, marginBottom: '4px' }}>{title}</p>
+        {title && <p style={{ fontWeight: 600, marginBottom: '4px' }}>{title}</p>}
         <p style={{ fontSize: '13px' }}>이미지가 없습니다. 관리자 패널에서 이미지를 추가하세요.</p>
       </div>
     )
@@ -84,7 +85,7 @@ export function ImageGalleryComponent({ config }: ComponentProps) {
 
   return (
     <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
-      <h2 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '10px', color: 'var(--text-primary)', flexShrink: 0 }}>{title}</h2>
+      {title && <h2 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '10px', color: 'var(--text-primary)', flexShrink: 0 }}>{title}</h2>}
 
       {/* Slide area */}
       <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#000', flex: 1, minHeight: 0 }}>
