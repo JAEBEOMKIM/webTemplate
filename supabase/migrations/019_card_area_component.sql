@@ -21,6 +21,7 @@ INSERT INTO component_definitions (
     "gap": 16,
     "card_radius": 16,
     "enable_entry_animation": true,
+    "trim_empty_space": true,
     "cards": [
       {
         "id": "card-sample-1",

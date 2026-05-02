@@ -32,6 +32,11 @@ interface CardItem {
   hover_anim?: HoverAnim
   aspect_ratio?: AspectRatio
   span?: number
+  // 카드 콘텐츠 영역 패딩 (px) — 비워두면 기본값 20 사용
+  padding_top?: number
+  padding_right?: number
+  padding_bottom?: number
+  padding_left?: number
 }
 
 interface CardAreaConfig {
@@ -43,6 +48,7 @@ interface CardAreaConfig {
   gap?: number
   card_radius?: number
   enable_entry_animation?: boolean
+  trim_empty_space?: boolean  // 컴포넌트 영역보다 콘텐츠가 작을 때 빈 공백 제거
   cards: CardItem[]
 }
 
@@ -97,6 +103,26 @@ export function CardAreaComponent({ config }: ComponentProps) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [activeSheet])
+
+  // 빈 공백 trim — 부모 그리드 셀의 align-self를 start로 설정해 콘텐츠 높이로 축소
+  const trimEmptySpace = cfg.trim_empty_space !== false
+  useEffect(() => {
+    const parent = containerRef.current?.parentElement
+    if (!parent) return
+    const prevAlignSelf = parent.style.alignSelf
+    const prevHeight = parent.style.height
+    if (trimEmptySpace) {
+      parent.style.alignSelf = 'start'
+      parent.style.height = 'fit-content'
+    } else {
+      parent.style.alignSelf = ''
+      parent.style.height = ''
+    }
+    return () => {
+      parent.style.alignSelf = prevAlignSelf
+      parent.style.height = prevHeight
+    }
+  }, [trimEmptySpace])
 
   const handleClick = (card: CardItem, e: React.MouseEvent) => {
     if (card.action_type === 'link' && card.action_url) {
@@ -187,7 +213,10 @@ export function CardAreaComponent({ config }: ComponentProps) {
           position: 'relative',
           height: '100%',
           minHeight: '120px',
-          padding: '20px',
+          paddingTop: `${card.padding_top ?? 20}px`,
+          paddingRight: `${card.padding_right ?? 20}px`,
+          paddingBottom: `${card.padding_bottom ?? 20}px`,
+          paddingLeft: `${card.padding_left ?? 20}px`,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: alignItems,
@@ -280,7 +309,7 @@ export function CardAreaComponent({ config }: ComponentProps) {
       }
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div ref={containerRef} style={{ width: '100%', height: trimEmptySpace ? 'auto' : '100%', display: 'flex', flexDirection: 'column' }}>
       {(cfg.title || cfg.subtitle) && (
         <div style={{ marginBottom: '16px' }}>
           {cfg.title && (
@@ -590,6 +619,16 @@ export function CardAreaConfigForm({ config, onChange }: ConfigFormProps) {
               스크롤 등장 애니메이션
             </label>
           </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '4px', gridColumn: '1 / -1' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={cfg.trim_empty_space !== false}
+                onChange={e => set({ trim_empty_space: e.target.checked })}
+              />
+              빈 공백 자동 제거 (콘텐츠 높이로 축소)
+            </label>
+          </div>
         </div>
       </div>
 
@@ -849,6 +888,58 @@ function CardEditor({ card, index, total, onUpdate, onRemove, onMove }: {
             <div>
               <label style={miniLabelStyle}>그리드 폭 (1~)</label>
               <input className="input" type="number" min={1} max={8} value={card.span ?? 1} onChange={e => onUpdate({ span: Number(e.target.value) })} />
+            </div>
+          </div>
+
+          {/* 카드 내부 패딩 */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+            <label style={miniLabelStyle}>카드 내부 패딩 (px)</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+              <div>
+                <label style={miniLabelStyle}>상</label>
+                <input className="input" type="number" min={0} max={120} value={card.padding_top ?? 20} onChange={e => onUpdate({ padding_top: Number(e.target.value) })} />
+              </div>
+              <div>
+                <label style={miniLabelStyle}>우</label>
+                <input className="input" type="number" min={0} max={120} value={card.padding_right ?? 20} onChange={e => onUpdate({ padding_right: Number(e.target.value) })} />
+              </div>
+              <div>
+                <label style={miniLabelStyle}>하</label>
+                <input className="input" type="number" min={0} max={120} value={card.padding_bottom ?? 20} onChange={e => onUpdate({ padding_bottom: Number(e.target.value) })} />
+              </div>
+              <div>
+                <label style={miniLabelStyle}>좌</label>
+                <input className="input" type="number" min={0} max={120} value={card.padding_left ?? 20} onChange={e => onUpdate({ padding_left: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => onUpdate({ padding_top: 20, padding_right: 20, padding_bottom: 20, padding_left: 20 })}
+                style={{ fontSize: '10px', padding: '4px 8px', flex: 1 }}
+              >
+                기본(20)
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  const v = card.padding_top ?? 20
+                  onUpdate({ padding_top: v, padding_right: v, padding_bottom: v, padding_left: v })
+                }}
+                style={{ fontSize: '10px', padding: '4px 8px', flex: 1 }}
+              >
+                상하좌우 동일
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => onUpdate({ padding_top: 0, padding_right: 0, padding_bottom: 0, padding_left: 0 })}
+                style={{ fontSize: '10px', padding: '4px 8px', flex: 1 }}
+              >
+                여백 없음
+              </button>
             </div>
           </div>
 
