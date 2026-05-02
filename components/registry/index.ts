@@ -18,6 +18,7 @@ import { EasterCantataComponent, EasterCantataConfigForm } from './easter-cantat
 import { DailyScheduleComponent, DailyScheduleConfigForm } from './daily-schedule/DailyScheduleComponent'
 import { TextCardBannerComponent, TextCardBannerConfigForm } from './text-card-banner/TextCardBannerComponent'
 import { CardAreaComponent, CardAreaConfigForm } from './card-area/CardAreaComponent'
+import { PlaceDetailComponent, PlaceDetailConfigForm } from './place-detail/PlaceDetailComponent'
 import type {
   ComponentDefinition,
   ComponentImpl,
@@ -48,6 +49,7 @@ export const componentImplementations = new Map<string, ComponentImpl>([
   ['daily-schedule', { Component: DailyScheduleComponent, ConfigForm: DailyScheduleConfigForm }],
   ['text-card-banner', { Component: TextCardBannerComponent, ConfigForm: TextCardBannerConfigForm }],
   ['card-area', { Component: CardAreaComponent, ConfigForm: CardAreaConfigForm }],
+  ['place-detail', { Component: PlaceDetailComponent, ConfigForm: PlaceDetailConfigForm }],
 ])
 
 // ── DB 행 + 코드 구현체 병합 → 렌더 가능한 컴포넌트만 반환 ──────────────
@@ -238,6 +240,60 @@ export const componentRegistry = new Map<string, ComponentDefinition>([
     },
     Component: CardAreaComponent,
     ConfigForm: CardAreaConfigForm,
+  }],
+  ['place-detail', {
+    id: 'place-detail',
+    name: '장소 상세',
+    description: '바텀시트/페이지에서 장소 정보 표시 (사진 + 정보 + 갤러리/지도/공유 임베드)',
+    icon: '📍',
+    defaultConfig: {
+      title: 'Creative Hub',
+      description: '혁신가, 아티스트, 그리고 사업가를 위한 프리미엄 코워킹 공간. 협업 환경, 최첨단 시설, 고속 인터넷, 그리고 커뮤니티 기반 분위기로 비즈니스 성장을 돕습니다.',
+      show_photos: true,
+      photos: [],
+      show_info: true,
+      info_items: [
+        { id: 'info-loc', icon: 'location_on', primary: '128 Innovation Way, Suite 400', secondary: 'Silicon Valley, CA 94025' },
+        { id: 'info-call', icon: 'call', primary: '+1 (555) 012-3456', secondary: 'creativehub.io' },
+      ],
+      show_gallery: false,
+      gallery_section_title: '갤러리',
+      gallery_config: {
+        title: '',
+        images: [],
+        autoplay: true,
+        interval: 4000,
+        image_fit: 'cover',
+        transition_effect: 'fade',
+        show_thumbnails: true,
+      },
+      show_map: true,
+      map_section_title: '위치',
+      map_config: {
+        app_key: '',
+        center_lat: 37.5665,
+        center_lng: 126.978,
+        zoom: 3,
+        map_type: 'ROADMAP',
+        markers: [],
+        show_controls: true,
+        height: 240,
+        map_title: '',
+      },
+      show_share: true,
+      share_section_title: '공유하기',
+      share_config: {
+        title: '이 장소 공유하기',
+        description: '',
+        kakao_app_key: '',
+        show_kakao: true,
+        show_sms: true,
+        show_copy: true,
+        show_qr: false,
+      },
+    },
+    Component: PlaceDetailComponent,
+    ConfigForm: PlaceDetailConfigForm,
   }],
   ['easter-cantata', { id: 'easter-cantata', name: '부활절 칸타타', description: '교회 칸타타 팜플렛 (다크 테마)', icon: '✝️', defaultConfig: { year: 2026, event_label: 'Easter Cantata', main_title: '만왕의 왕\n예수 그리스도', sub_title: '', date_label: '2026년 4월 3일 오후 7시', venue_label: '등촌 교회 본당', poster_image_url: '', show_program: true, show_choir: true, show_footer_verse: true, program_items: [{ number: '01', title: '예수 그리스도', performer: '합창' }], conductor_name: '', pianist_name: '', choir_label: '찬양대', soprano: '', alto: '', tenor: '', bass: '', orchestra_label: '앙상블', orchestra_sections: [], bible_verse: '"그리스도께서 다시 살아나신 일이 없으면 너희의 믿음도 헛되고"', bible_ref: '(고린도전서 15:17)', color_bg: '#1a0f1c', color_surface: '#261629', color_primary: '#f2dfd0', color_tertiary: '#ffdcbd', color_secondary: '#d5c3b5' }, Component: EasterCantataComponent, ConfigForm: EasterCantataConfigForm }],
 ])
