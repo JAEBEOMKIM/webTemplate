@@ -189,16 +189,18 @@ function InviteCodeGate({ page, user, onUnlock }: { page: PageData; user: UserPr
 }
 
 // ── 팝업 래퍼 ─────────────────────────────────────────────────
-function ComponentCell({ comp, def, page, isAdmin, showBorder }: {
+function ComponentCell({ comp, def, page, isAdmin, showBorder, effectiveY, collapsed, onToggleCollapsed }: {
   comp: PageComponentData; def: ComponentDefinition;
   page: PageData; isAdmin?: boolean; showBorder: boolean
+  effectiveY: number
+  collapsed: boolean
+  onToggleCollapsed: () => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const popups = (comp.config.popups as PopupConfig[] | undefined)
   const { activePopup, close } = usePopupTriggers(comp.id, popups, containerRef)
 
   const x = comp.grid_x ?? 0
-  const y = comp.grid_y ?? 0
   const w = comp.grid_w ?? 10
   const h = comp.grid_h ?? 6
 
@@ -207,44 +209,24 @@ function ComponentCell({ comp, def, page, isAdmin, showBorder }: {
   const adminOnly = (comp.config.admin_only as boolean) === true
   const collapsible = (comp.config.collapsible as boolean) === true
 
-  // 접기/펼치기 상태 — 세션에 영구 저장
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (!collapsible || typeof window === 'undefined') return false
-    try {
-      return window.sessionStorage.getItem(`component-collapsed-${comp.id}`) === '1'
-    } catch {
-      return false
-    }
-  })
-
-  const toggleCollapsed = () => {
-    setCollapsed(prev => {
-      const next = !prev
-      try {
-        if (next) window.sessionStorage.setItem(`component-collapsed-${comp.id}`, '1')
-        else window.sessionStorage.removeItem(`component-collapsed-${comp.id}`)
-      } catch {}
-      return next
-    })
-  }
-
   // lock_height 모드: 그리드 셀 최대 높이 (h * row_height + (h-1) * gap)
   const cellMaxHeight = h * GRID_ROW_HEIGHT + (h - 1) * GRID_GAP
 
   // 셀 스타일 결정
+  // 접힘 상태: gridRow span = 1 (1 그리드 행만 차지) → 다른 컴포넌트들이 위로 올라옴
+  //           overflow: hidden 으로 콘텐츠를 잘라서 상단 1행만 노출 (제목/타이틀 영역)
+  const effectiveSpan = collapsed ? 1 : h
+
   const cellStyle: React.CSSProperties = {
     gridColumn: `${x + 1} / span ${w}`,
-    gridRow: `${y + 1} / span ${h}`,
+    gridRow: `${effectiveY + 1} / span ${effectiveSpan}`,
     minWidth: 0, minHeight: 0,
     position: 'relative',
     ...(showBorder ? {} : { background: 'transparent' }),
   }
 
   if (collapsed) {
-    // 접힘: 콘텐츠 숨기고 셀을 최소 높이로 축소 (alignSelf:start 로 다른 셀 영향 없음)
     cellStyle.overflow = 'hidden'
-    cellStyle.alignSelf = 'start'
-    cellStyle.height = 'fit-content'
   } else if (lockHeight) {
     // 높이 고정: 스크롤 안 생김, 콘텐츠 작으면 축소, 크면 grid 사이즈로 캡
     cellStyle.overflow = 'hidden'
@@ -280,7 +262,7 @@ function ComponentCell({ comp, def, page, isAdmin, showBorder }: {
         {collapsible && (
           <button
             type="button"
-            onClick={toggleCollapsed}
+            onClick={onToggleCollapsed}
             aria-label={collapsed ? '펼치기' : '접기'}
             title={collapsed ? '펼치기' : '접기'}
             style={{
@@ -304,20 +286,8 @@ function ComponentCell({ comp, def, page, isAdmin, showBorder }: {
           </button>
         )}
 
-        {/* 콘텐츠 (접힘 상태에서는 숨김) */}
-        {!collapsed ? (
-          <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
-        ) : (
-          <div style={{
-            padding: '10px 36px 10px 14px',
-            fontSize: '12px', color: 'var(--text-muted)',
-            display: 'flex', alignItems: 'center',
-            minHeight: '34px',
-            opacity: 0.7,
-          }}>
-            접힘
-          </div>
-        )}
+        {/* 콘텐츠는 항상 렌더링 — 접힘 시 overflow:hidden 로 상단(제목 영역)만 보임 */}
+        <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
       </div>
       {activePopup && !collapsed && (
         <PopupOverlay open config={activePopup} parentComponentId={comp.id} pageId={page.id} onClose={close} />
@@ -370,6 +340,40 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
   // 관리자 전용 컴포넌트는 비관리자에게서 제외
   const visibleComponents = components.filter(c => !((c.config.admin_only as boolean) === true && !isAdmin))
 
+  // ── 접기/펼치기 상태 (전역 관리 — 레이아웃 압축을 위해) ─────────────
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
+
+  // 마운트 시 sessionStorage 에서 복구
+  const visibleIdKey = visibleComponents.map(c => c.id).join(',')
+  useEffect(() => {
+    const ids = new Set<string>()
+    for (const c of visibleComponents) {
+      if ((c.config.collapsible as boolean) === true) {
+        try {
+          if (window.sessionStorage.getItem(`component-collapsed-${c.id}`) === '1') {
+            ids.add(c.id)
+          }
+        } catch {}
+      }
+    }
+    setCollapsedIds(ids)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleIdKey])
+
+  const toggleCollapsed = (id: string) => {
+    setCollapsedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+        try { window.sessionStorage.removeItem(`component-collapsed-${id}`) } catch {}
+      } else {
+        next.add(id)
+        try { window.sessionStorage.setItem(`component-collapsed-${id}`, '1') } catch {}
+      }
+      return next
+    })
+  }
+
   // 전체 페이지 단독 표시 컴포넌트 확인
   const fullPageComp = visibleComponents.find(c => c.config.full_page === true)
   if (fullPageComp) {
@@ -379,9 +383,34 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
     }
   }
 
-  // 그리드 전체 높이 계산 (빈 공간 없이 딱 맞게)
+  // ── 레이아웃 압축 — 접힘 컴포넌트가 차지한 공간만큼 아래 컴포넌트들을 위로 끌어올림 ─
+  // 같은 row 의 컴포넌트들은 함께 처리하며, row 의 effective height 는
+  // 접힘 안 된 컴포넌트가 1개라도 있으면 그 중 max h, 모두 접혔으면 1
+  const yOffsetById = new Map<string, number>()
+  const rowGroups = new Map<number, PageComponentData[]>()
+  for (const c of visibleComponents) {
+    const y = c.grid_y ?? 0
+    if (!rowGroups.has(y)) rowGroups.set(y, [])
+    rowGroups.get(y)!.push(c)
+  }
+  let cumulativeSavings = 0
+  for (const [, comps] of [...rowGroups.entries()].sort(([a], [b]) => a - b)) {
+    for (const c of comps) yOffsetById.set(c.id, cumulativeSavings)
+    const nonCollapsed = comps.filter(c => !collapsedIds.has(c.id))
+    const rowEffectiveH = nonCollapsed.length > 0
+      ? Math.max(...nonCollapsed.map(c => c.grid_h ?? 6))
+      : 1  // 모두 접혔으면 1행
+    const rowOriginalH = Math.max(...comps.map(c => c.grid_h ?? 6))
+    cumulativeSavings += Math.max(0, rowOriginalH - rowEffectiveH)
+  }
+
+  // 그리드 전체 높이 — 압축 반영
   const gridRows = visibleComponents.length > 0
-    ? Math.max(...visibleComponents.map(c => (c.grid_y ?? 0) + (c.grid_h ?? 6)))
+    ? Math.max(...visibleComponents.map(c => {
+        const effY = (c.grid_y ?? 0) - (yOffsetById.get(c.id) ?? 0)
+        const effH = collapsedIds.has(c.id) ? 1 : (c.grid_h ?? 6)
+        return effY + effH
+      }))
     : 0
 
   const showHeader = page.show_header !== false
@@ -437,8 +466,20 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
               const def = componentRegistry.get(comp.component_type)
               if (!def) return null
               const showBorder = (comp.config.show_border as boolean) !== false
+              const effectiveY = (comp.grid_y ?? 0) - (yOffsetById.get(comp.id) ?? 0)
+              const collapsed = collapsedIds.has(comp.id)
               return (
-                <ComponentCell key={comp.id} comp={comp} def={def} page={page} isAdmin={isAdmin} showBorder={showBorder} />
+                <ComponentCell
+                  key={comp.id}
+                  comp={comp}
+                  def={def}
+                  page={page}
+                  isAdmin={isAdmin}
+                  showBorder={showBorder}
+                  effectiveY={effectiveY}
+                  collapsed={collapsed}
+                  onToggleCollapsed={() => toggleCollapsed(comp.id)}
+                />
               )
             })}
           </div>
