@@ -17,6 +17,7 @@ import { TitleHeaderComponent, TitleHeaderConfigForm } from './title-header/Titl
 import { EasterCantataComponent, EasterCantataConfigForm } from './easter-cantata/EasterCantataComponent'
 import { DailyScheduleComponent, DailyScheduleConfigForm } from './daily-schedule/DailyScheduleComponent'
 import { TextCardBannerComponent, TextCardBannerConfigForm } from './text-card-banner/TextCardBannerComponent'
+import { CardAreaComponent, CardAreaConfigForm } from './card-area/CardAreaComponent'
 import type {
   ComponentDefinition,
   ComponentImpl,
@@ -46,6 +47,7 @@ export const componentImplementations = new Map<string, ComponentImpl>([
   ['easter-cantata', { Component: EasterCantataComponent, ConfigForm: EasterCantataConfigForm }],
   ['daily-schedule', { Component: DailyScheduleComponent, ConfigForm: DailyScheduleConfigForm }],
   ['text-card-banner', { Component: TextCardBannerComponent, ConfigForm: TextCardBannerConfigForm }],
+  ['card-area', { Component: CardAreaComponent, ConfigForm: CardAreaConfigForm }],
 ])
 
 // ── DB 행 + 코드 구현체 병합 → 렌더 가능한 컴포넌트만 반환 ──────────────
@@ -174,6 +176,67 @@ export const componentRegistry = new Map<string, ComponentDefinition>([
   ['title-header', { id: 'title-header', name: '타이틀 헤더', description: '타이프라이터/빛나는 텍스트 등 애니메이션 타이틀', icon: '✍️', defaultConfig: { variant: 'typewriter', texts: ['환영합니다', '반갑습니다', 'Welcome'], prefix: '', typingSpeed: 80, deletingSpeed: 40, pauseDuration: 2000, cursorChar: '|', cursorColor: '', gradientColors: '', gradientSpeed: 2, hoverGlow: false, fontSize: 32, fontFamily: 'inherit', fontWeight: 800, italic: false, align: 'center', textColor: '', subtitle: '', subtitleColor: '', link: '' }, Component: TitleHeaderComponent, ConfigForm: TitleHeaderConfigForm }],
   ['text-card-banner', { id: 'text-card-banner', name: '텍스트 카드배너', description: '3종 변형(Guide/Announcement/Feature) 카드 배너', icon: '🃏', defaultConfig: { heading: 'Chronos', subtitle: 'Editorial Guidelines & Updates', layout: 'stack', gap: 24, cards: [{ id: 'card-1', variant: 'guide', tag: 'New Guide', title: 'Mastering Deep Focus Intervals', description: 'Learn how to sequence your high-cognitive tasks during peak neurological windows while maintaining a serene workspace environment.', linkLabel: 'Read the methodology', color: 'primary' }, { id: 'card-2', variant: 'announcement', tag: 'Important', title: 'System Integrity Protocol', meta: 'Released 2 hours ago', description: 'We are transitioning our internal data structures to prioritize asynchronous composure. This ensures background scheduling and dependency mapping with absolute silence.', buttonLabel: 'Acknowledge Changes', color: 'primary' }, { id: 'card-3', variant: 'feature', title: 'Evolution of the Fluid Timeline', description: 'Version 2.4 introduces a more nuanced way to visualize your days momentum.', bullets: ['Dynamic node scaling based on task complexity', 'Ambient glow indicators for focus areas', 'Reduced visual noise in low-density periods'], badge: 'V2.4 STABLE RELEASE', color: 'primary' }] }, Component: TextCardBannerComponent, ConfigForm: TextCardBannerConfigForm }],
   ['daily-schedule', { id: 'daily-schedule', name: '동적 하루일정표', description: '스크롤 위치에 따라 현재 시간대가 부각되는 타임라인 일정표', icon: '📋', defaultConfig: { title: '오늘의 일정', show_current_time: true, auto_scroll: true, compact_mode: false, events: [{ id: 'ev-1', time: '09:00', endTime: '10:00', title: '모닝 스탠드업', description: '팀 전체 진행 상황 공유', color: 'amber' }, { id: 'ev-2', time: '10:30', endTime: '12:00', title: '디자인 리뷰', description: 'UI/UX 피드백 및 수정사항 논의', color: 'purple' }, { id: 'ev-3', time: '12:00', endTime: '13:00', title: '점심 시간', description: '', color: 'green' }, { id: 'ev-4', time: '14:00', endTime: '15:30', title: '스프린트 플래닝', description: '다음 스프린트 백로그 정리 및 포인트 산정', color: 'blue' }, { id: 'ev-5', time: '16:00', endTime: '17:00', title: '1:1 미팅', description: '팀원 개별 면담', color: 'teal' }, { id: 'ev-6', time: '17:30', endTime: '18:00', title: '일일 회고', description: '오늘 진행한 작업 정리', color: 'rose' }] }, Component: DailyScheduleComponent, ConfigForm: DailyScheduleConfigForm }],
+  ['card-area', {
+    id: 'card-area',
+    name: '카드 영역',
+    description: '클릭 가능한 카드 그리드 (링크/바텀시트/모달, 배경 + 애니메이션 지원)',
+    icon: '🃏',
+    defaultConfig: {
+      title: '주요 메뉴',
+      subtitle: '카드를 클릭해 자세히 보세요',
+      layout: 'grid',
+      columns_desktop: 3,
+      columns_mobile: 1,
+      gap: 16,
+      card_radius: 16,
+      enable_entry_animation: true,
+      cards: [
+        {
+          id: 'card-sample-1',
+          title: '서비스 소개',
+          subtitle: 'ABOUT',
+          description: '우리가 제공하는 서비스의 전체 개요를 확인해 보세요.',
+          badge: 'NEW',
+          bg_type: 'gradient',
+          bg_gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          action_type: 'sheet',
+          sheet_content: '여기에 서비스 상세 내용을 작성합니다.\n여러 줄 입력이 가능합니다.',
+          hover_anim: 'lift',
+          aspect_ratio: '4/3',
+          align: 'bottom',
+        },
+        {
+          id: 'card-sample-2',
+          title: '오시는 길',
+          subtitle: 'LOCATION',
+          description: '지도와 함께 위치 정보를 확인하세요.',
+          bg_type: 'gradient',
+          bg_gradient: 'linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%)',
+          action_type: 'link',
+          action_url: '#',
+          action_target: '_self',
+          hover_anim: 'zoom',
+          aspect_ratio: '4/3',
+          align: 'bottom',
+        },
+        {
+          id: 'card-sample-3',
+          title: '문의하기',
+          subtitle: 'CONTACT',
+          description: '궁금한 점이 있으면 언제든 연락주세요.',
+          bg_type: 'gradient',
+          bg_gradient: 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)',
+          action_type: 'modal',
+          sheet_content: '연락처 안내\n전화: 000-0000-0000\n이메일: contact@example.com',
+          hover_anim: 'tilt',
+          aspect_ratio: '4/3',
+          align: 'bottom',
+        },
+      ],
+    },
+    Component: CardAreaComponent,
+    ConfigForm: CardAreaConfigForm,
+  }],
   ['easter-cantata', { id: 'easter-cantata', name: '부활절 칸타타', description: '교회 칸타타 팜플렛 (다크 테마)', icon: '✝️', defaultConfig: { year: 2026, event_label: 'Easter Cantata', main_title: '만왕의 왕\n예수 그리스도', sub_title: '', date_label: '2026년 4월 3일 오후 7시', venue_label: '등촌 교회 본당', poster_image_url: '', show_program: true, show_choir: true, show_footer_verse: true, program_items: [{ number: '01', title: '예수 그리스도', performer: '합창' }], conductor_name: '', pianist_name: '', choir_label: '찬양대', soprano: '', alto: '', tenor: '', bass: '', orchestra_label: '앙상블', orchestra_sections: [], bible_verse: '"그리스도께서 다시 살아나신 일이 없으면 너희의 믿음도 헛되고"', bible_ref: '(고린도전서 15:17)', color_bg: '#1a0f1c', color_surface: '#261629', color_primary: '#f2dfd0', color_tertiary: '#ffdcbd', color_secondary: '#d5c3b5' }, Component: EasterCantataComponent, ConfigForm: EasterCantataConfigForm }],
 ])
 
