@@ -28,6 +28,7 @@ interface CardItem {
   action_type: ActionType
   action_url?: string
   action_target?: '_self' | '_blank'
+  action_label?: string  // 버튼 표시 텍스트 (비워두면 액션 타입별 기본값)
   sheet_content?: string
   hover_anim?: HoverAnim
   aspect_ratio?: AspectRatio
@@ -124,19 +125,6 @@ export function CardAreaComponent({ config }: ComponentProps) {
     }
   }, [trimEmptySpace])
 
-  const handleClick = (card: CardItem, e: React.MouseEvent) => {
-    if (card.action_type === 'link' && card.action_url) {
-      // <a> 태그가 처리하므로 통과
-      return
-    }
-    if (card.action_type === 'sheet' || card.action_type === 'modal') {
-      e.preventDefault()
-      setActiveSheet({ card, mode: card.action_type })
-    }
-    // 'popup' 액션: data-trigger-id 로 외부 팝업 시스템(usePopupTriggers)에 위임
-    // 'none': 아무 동작도 하지 않음
-  }
-
   const renderCardInner = (card: CardItem, idx: number) => {
     const bgStyle = getBackgroundStyle(card)
     const textColor = card.text_color || (card.bg_type === 'image' ? '#ffffff' : 'var(--text-primary)')
@@ -148,7 +136,6 @@ export function CardAreaComponent({ config }: ComponentProps) {
       <div
         className={`ca-card ca-hover-${card.hover_anim || 'lift'}`}
         data-card-id={card.id}
-        data-trigger-id={card.trigger_id || undefined}
         ref={el => {
           if (el) cardRefs.current.set(card.id, el)
           else cardRefs.current.delete(card.id)
@@ -157,7 +144,6 @@ export function CardAreaComponent({ config }: ComponentProps) {
           position: 'relative',
           borderRadius: `${radius}px`,
           overflow: 'hidden',
-          cursor: card.action_type !== 'none' ? 'pointer' : 'default',
           minHeight: '120px',
           aspectRatio: aspect,
           opacity: isVisible ? 1 : 0,
@@ -257,15 +243,10 @@ export function CardAreaComponent({ config }: ComponentProps) {
             </div>
           )}
           {card.action_type !== 'none' && (
-            <div style={{
-              marginTop: 'auto', paddingTop: '8px',
-              fontSize: '12px', fontWeight: 600,
-              display: 'flex', alignItems: 'center', gap: '4px',
-              opacity: 0.9,
-            }}>
-              {card.action_type === 'link' ? '바로가기' : card.action_type === 'popup' ? '열기' : '자세히 보기'}
-              <span className="ca-arrow" style={{ transition: 'transform 0.3s ease', display: 'inline-block' }}>→</span>
-            </div>
+            <ActionButton
+              card={card}
+              onSheetOpen={(mode) => setActiveSheet({ card, mode })}
+            />
           )}
         </div>
       </div>
@@ -273,25 +254,8 @@ export function CardAreaComponent({ config }: ComponentProps) {
   }
 
   const renderCard = (card: CardItem, idx: number) => {
-    const inner = renderCardInner(card, idx)
-    if (card.action_type === 'link' && card.action_url) {
-      return (
-        <a
-          key={card.id}
-          href={card.action_url}
-          target={card.action_target ?? '_self'}
-          rel={card.action_target === '_blank' ? 'noopener noreferrer' : undefined}
-          style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-        >
-          {inner}
-        </a>
-      )
-    }
-    return (
-      <div key={card.id} onClick={e => handleClick(card, e)} style={{ display: 'block' }}>
-        {inner}
-      </div>
-    )
+    // 카드 자체는 클릭 이벤트 없음 — 액션은 카드 내부의 ActionButton 만 트리거
+    return <div key={card.id} style={{ display: 'block' }}>{renderCardInner(card, idx)}</div>
   }
 
   const containerStyle: React.CSSProperties = layout === 'grid'
@@ -364,8 +328,9 @@ export function CardAreaComponent({ config }: ComponentProps) {
         .ca-hover-tilt:hover { transform: perspective(900px) rotateY(-3deg) rotateX(2deg) translateY(-2px) !important; box-shadow: 0 18px 40px rgba(0,0,0,0.2); }
         .ca-hover-glow:hover { box-shadow: 0 0 0 2px var(--accent), 0 12px 32px rgba(59,130,246,0.25); }
         .ca-hover-shine:hover .ca-shine { left: 150% !important; }
-        .ca-card:active { transform: scale(0.985); }
-        .ca-card:hover .ca-arrow { transform: translateX(4px); }
+        .ca-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,0.25) !important; background: #fff !important; }
+        .ca-btn:hover .ca-arrow { transform: translateX(4px); }
+        .ca-btn:active { transform: scale(0.96); }
         @media (max-width: 640px) {
           .ca-grid { --ca-cols: var(--ca-cols-mobile, 1) !important; }
         }
@@ -389,6 +354,84 @@ function getBackgroundStyle(card: CardItem): React.CSSProperties {
     return { background: card.bg_gradient }
   }
   return { background: card.bg_color || 'var(--bg-secondary)' }
+}
+
+// ── Action Button (카드 내부의 유일한 클릭 트리거) ──────────────
+function ActionButton({ card, onSheetOpen }: {
+  card: CardItem
+  onSheetOpen: (mode: 'sheet' | 'modal') => void
+}) {
+  const defaultLabel =
+    card.action_type === 'link' ? '바로가기'
+    : card.action_type === 'popup' ? '열기'
+    : card.action_type === 'sheet' ? '자세히 보기'
+    : card.action_type === 'modal' ? '자세히 보기'
+    : ''
+  const label = (card.action_label && card.action_label.trim()) || defaultLabel
+
+  const buttonStyle: React.CSSProperties = {
+    marginTop: 'auto',
+    alignSelf: 'flex-start',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 16px',
+    borderRadius: '999px',
+    fontSize: '12px',
+    fontWeight: 700,
+    background: 'rgba(255,255,255,0.95)',
+    color: '#111',
+    border: 'none',
+    cursor: 'pointer',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+    boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+    textDecoration: 'none',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
+    letterSpacing: '0.01em',
+    whiteSpace: 'nowrap',
+  }
+
+  // 외부 팝업 시스템에서 셀렉터로 타겟팅 가능한 trigger_id (버튼에만 부착)
+  const triggerId = card.trigger_id || undefined
+
+  // Link 액션: <a> 태그
+  if (card.action_type === 'link' && card.action_url) {
+    return (
+      <a
+        className="ca-btn"
+        href={card.action_url}
+        target={card.action_target ?? '_self'}
+        rel={card.action_target === '_blank' ? 'noopener noreferrer' : undefined}
+        data-trigger-id={triggerId}
+        onClick={e => e.stopPropagation()}
+        style={buttonStyle}
+      >
+        {label}
+        <span className="ca-arrow" style={{ display: 'inline-block', transition: 'transform 0.3s ease' }}>→</span>
+      </a>
+    )
+  }
+
+  // sheet / modal / popup
+  return (
+    <button
+      className="ca-btn"
+      type="button"
+      data-trigger-id={triggerId}
+      onClick={e => {
+        e.stopPropagation()
+        if (card.action_type === 'sheet' || card.action_type === 'modal') {
+          onSheetOpen(card.action_type)
+        }
+        // 'popup' 액션: 외부 usePopupTriggers 가 data-trigger-id 셀렉터로 처리
+      }}
+      style={buttonStyle}
+    >
+      {label}
+      <span className="ca-arrow" style={{ display: 'inline-block', transition: 'transform 0.3s ease' }}>→</span>
+    </button>
+  )
 }
 
 // ── Bottom Sheet / Modal ───────────────────────────────────────
@@ -947,12 +990,28 @@ function CardEditor({ card, index, total, onUpdate, onRemove, onMove }: {
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
             <label style={miniLabelStyle}>클릭 시 동작</label>
             <select className="input" value={card.action_type} onChange={e => onUpdate({ action_type: e.target.value as ActionType })}>
-              <option value="none">동작 없음</option>
+              <option value="none">동작 없음 (버튼 숨김)</option>
               <option value="link">링크 이동</option>
               <option value="sheet">바텀시트로 상세 보기</option>
               <option value="modal">모달로 상세 보기</option>
               <option value="popup">외부 팝업 트리거 (ID 바인딩)</option>
             </select>
+
+            {card.action_type !== 'none' && (
+              <div style={{ marginTop: '8px' }}>
+                <label style={miniLabelStyle}>버튼 텍스트 (선택)</label>
+                <input
+                  className="input"
+                  value={card.action_label ?? ''}
+                  onChange={e => onUpdate({ action_label: e.target.value })}
+                  placeholder={
+                    card.action_type === 'link' ? '예: 바로가기'
+                    : card.action_type === 'popup' ? '예: 열기'
+                    : '예: 자세히 보기'
+                  }
+                />
+              </div>
+            )}
 
             {card.action_type === 'link' && (
               <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' }}>
@@ -987,7 +1046,7 @@ function CardEditor({ card, index, total, onUpdate, onRemove, onMove }: {
             )}
           </div>
 
-          {/* 팝업 트리거 ID — 모든 액션에서 사용 가능 (외부 팝업 시스템 바인딩) */}
+          {/* 팝업 트리거 ID — 버튼 영역에만 부착 (버튼 클릭 시에만 이벤트 발생) */}
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
             <label style={miniLabelStyle}>팝업 트리거 ID (선택)</label>
             <input
@@ -995,10 +1054,12 @@ function CardEditor({ card, index, total, onUpdate, onRemove, onMove }: {
               value={card.trigger_id ?? ''}
               onChange={e => onUpdate({ trigger_id: e.target.value.trim() })}
               placeholder="예: card-promo-1 (영문/숫자/하이픈)"
+              disabled={card.action_type === 'none'}
             />
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
-              값을 입력하면 카드에 <code style={{ background: 'var(--bg-primary)', padding: '1px 4px', borderRadius: '3px' }}>data-trigger-id=&quot;값&quot;</code> 속성이 부착됩니다.<br />
-              페이지 팝업 설정에서 <code style={{ background: 'var(--bg-primary)', padding: '1px 4px', borderRadius: '3px' }}>{`[data-trigger-id="값"]`}</code> 셀렉터로 클릭 이벤트를 바인딩할 수 있습니다.
+              값을 입력하면 <strong>버튼</strong>에 <code style={{ background: 'var(--bg-primary)', padding: '1px 4px', borderRadius: '3px' }}>data-trigger-id=&quot;값&quot;</code> 속성이 부착됩니다.<br />
+              페이지 팝업 설정에서 <code style={{ background: 'var(--bg-primary)', padding: '1px 4px', borderRadius: '3px' }}>{`[data-trigger-id="값"]`}</code> 셀렉터로 <strong>버튼 클릭 시에만</strong> 이벤트가 발생합니다.
+              {card.action_type === 'none' && <><br /><span style={{ color: 'var(--danger, #ef4444)' }}>※ 액션이 &quot;동작 없음&quot;이면 버튼이 표시되지 않아 트리거 ID도 사용되지 않습니다.</span></>}
             </div>
           </div>
         </div>
