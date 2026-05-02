@@ -879,6 +879,57 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                           ✦ 이 컴포넌트가 페이지 전체를 단독으로 채웁니다.<br />헤더·그리드·여백 없이 풀스크린으로 렌더링됩니다.
                         </p>
                       )}
+
+                      {/* 높이 고정 — 컴포넌트 내부 스크롤 비활성, 콘텐츠 작으면 축소, 크면 그리드 사이즈로 캡 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          id="common-lock-height"
+                          checked={(selectedComponent.config.lock_height as boolean) === true}
+                          onChange={e => handleConfigChange(selectedComponent.id, { ...selectedComponent.config, lock_height: e.target.checked })}
+                          style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
+                        />
+                        <label htmlFor="common-lock-height" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>높이 고정 (스크롤 안함)</label>
+                      </div>
+                      {(selectedComponent.config.lock_height as boolean) === true && (
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: '6px', margin: 0 }}>
+                          ✓ 콘텐츠가 작으면 자동으로 줄어들고, 크면 그리드 사이즈를 넘지 않게 잘립니다 (내부 스크롤 없음).
+                        </p>
+                      )}
+
+                      {/* 관리자 전용 — 일반 사용자에겐 숨김, 관리자에겐 빨간 뱃지로 표시 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          id="common-admin-only"
+                          checked={(selectedComponent.config.admin_only as boolean) === true}
+                          onChange={e => handleConfigChange(selectedComponent.id, { ...selectedComponent.config, admin_only: e.target.checked })}
+                          style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
+                        />
+                        <label htmlFor="common-admin-only" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>관리자 전용 (페이지에서 숨김)</label>
+                      </div>
+                      {(selectedComponent.config.admin_only as boolean) === true && (
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', margin: 0 }}>
+                          🔒 일반 방문자는 이 컴포넌트를 볼 수 없습니다. 관리자에게는 빨간 라벨과 함께 표시됩니다.
+                        </p>
+                      )}
+
+                      {/* 접기/펼치기 버튼 — 우상단에 토글 버튼, 세션에 상태 저장 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          id="common-collapsible"
+                          checked={(selectedComponent.config.collapsible as boolean) === true}
+                          onChange={e => handleConfigChange(selectedComponent.id, { ...selectedComponent.config, collapsible: e.target.checked })}
+                          style={{ width: '14px', height: '14px', accentColor: 'var(--accent)' }}
+                        />
+                        <label htmlFor="common-collapsible" style={{ fontSize: '13px', color: 'var(--text-primary)', cursor: 'pointer' }}>접기/펼치기 버튼 표시</label>
+                      </div>
+                      {(selectedComponent.config.collapsible as boolean) === true && (
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: '6px', margin: 0 }}>
+                          ↕ 우상단에 작은 +/− 토글이 표시됩니다. 사용자별 접힘 상태는 브라우저 세션 동안 유지됩니다.
+                        </p>
+                      )}
                     </div>
                   </div>
                   <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />

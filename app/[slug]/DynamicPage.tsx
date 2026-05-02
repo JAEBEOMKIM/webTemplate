@@ -202,21 +202,124 @@ function ComponentCell({ comp, def, page, isAdmin, showBorder }: {
   const w = comp.grid_w ?? 10
   const h = comp.grid_h ?? 6
 
+  // 공통 옵션
+  const lockHeight = (comp.config.lock_height as boolean) === true
+  const adminOnly = (comp.config.admin_only as boolean) === true
+  const collapsible = (comp.config.collapsible as boolean) === true
+
+  // 접기/펼치기 상태 — 세션에 영구 저장
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (!collapsible || typeof window === 'undefined') return false
+    try {
+      return window.sessionStorage.getItem(`component-collapsed-${comp.id}`) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      const next = !prev
+      try {
+        if (next) window.sessionStorage.setItem(`component-collapsed-${comp.id}`, '1')
+        else window.sessionStorage.removeItem(`component-collapsed-${comp.id}`)
+      } catch {}
+      return next
+    })
+  }
+
+  // lock_height 모드: 그리드 셀 최대 높이 (h * row_height + (h-1) * gap)
+  const cellMaxHeight = h * GRID_ROW_HEIGHT + (h - 1) * GRID_GAP
+
+  // 셀 스타일 결정
+  const cellStyle: React.CSSProperties = {
+    gridColumn: `${x + 1} / span ${w}`,
+    gridRow: `${y + 1} / span ${h}`,
+    minWidth: 0, minHeight: 0,
+    position: 'relative',
+    ...(showBorder ? {} : { background: 'transparent' }),
+  }
+
+  if (collapsed) {
+    // 접힘: 콘텐츠 숨기고 셀을 최소 높이로 축소 (alignSelf:start 로 다른 셀 영향 없음)
+    cellStyle.overflow = 'hidden'
+    cellStyle.alignSelf = 'start'
+    cellStyle.height = 'fit-content'
+  } else if (lockHeight) {
+    // 높이 고정: 스크롤 안 생김, 콘텐츠 작으면 축소, 크면 grid 사이즈로 캡
+    cellStyle.overflow = 'hidden'
+    cellStyle.alignSelf = 'start'
+    cellStyle.maxHeight = `${cellMaxHeight}px`
+  } else {
+    cellStyle.overflow = 'auto'
+  }
+
   return (
     <>
       <div
         ref={containerRef}
         className={showBorder ? 'card' : undefined}
-        style={{
-          gridColumn: `${x + 1} / span ${w}`,
-          gridRow: `${y + 1} / span ${h}`,
-          overflow: 'auto', minWidth: 0, minHeight: 0,
-          ...(showBorder ? {} : { background: 'transparent' }),
-        }}
+        style={cellStyle}
       >
-        <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
+        {/* 관리자 전용 표시 — 관리자에게만 노출 */}
+        {adminOnly && isAdmin && (
+          <div style={{
+            position: 'absolute', top: '6px', left: '6px', zIndex: 5,
+            fontSize: '10px', fontWeight: 600,
+            background: 'rgba(239, 68, 68, 0.92)', color: '#fff',
+            padding: '2px 8px', borderRadius: '6px',
+            letterSpacing: '0.02em',
+            pointerEvents: 'none',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+          }}>
+            🔒 관리자 전용
+          </div>
+        )}
+
+        {/* 접기/펼치기 토글 버튼 */}
+        {collapsible && (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? '펼치기' : '접기'}
+            title={collapsed ? '펼치기' : '접기'}
+            style={{
+              position: 'absolute', top: '6px', right: '6px', zIndex: 5,
+              width: '22px', height: '22px',
+              borderRadius: '50%',
+              border: '1px solid var(--border)',
+              background: 'var(--bg-primary)',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '12px', fontWeight: 700, lineHeight: 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.15s, color 0.15s, transform 0.15s',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+              padding: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-secondary)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-primary)' }}
+          >
+            {collapsed ? '+' : '−'}
+          </button>
+        )}
+
+        {/* 콘텐츠 (접힘 상태에서는 숨김) */}
+        {!collapsed ? (
+          <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
+        ) : (
+          <div style={{
+            padding: '10px 36px 10px 14px',
+            fontSize: '12px', color: 'var(--text-muted)',
+            display: 'flex', alignItems: 'center',
+            minHeight: '34px',
+            opacity: 0.7,
+          }}>
+            접힘
+          </div>
+        )}
       </div>
-      {activePopup && (
+      {activePopup && !collapsed && (
         <PopupOverlay open config={activePopup} parentComponentId={comp.id} pageId={page.id} onClose={close} />
       )}
     </>
@@ -231,9 +334,24 @@ function FullPageCell({ comp, def, page, isAdmin }: {
   const popups = (comp.config.popups as PopupConfig[] | undefined)
   const { activePopup, close } = usePopupTriggers(comp.id, popups, containerRef)
 
+  const adminOnly = (comp.config.admin_only as boolean) === true
+
   return (
     <>
-      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh' }}>
+      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', position: 'relative' }}>
+        {adminOnly && isAdmin && (
+          <div style={{
+            position: 'fixed', top: '12px', left: '12px', zIndex: 100,
+            fontSize: '11px', fontWeight: 600,
+            background: 'rgba(239, 68, 68, 0.92)', color: '#fff',
+            padding: '4px 10px', borderRadius: '6px',
+            letterSpacing: '0.02em',
+            pointerEvents: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          }}>
+            🔒 관리자 전용
+          </div>
+        )}
         <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
       </div>
       {activePopup && (
@@ -249,8 +367,11 @@ const GRID_ROW_HEIGHT = 60 // px
 const GRID_GAP = 8 // px
 
 function PageContent({ page, components, user, isAdmin }: { page: PageData; components: PageComponentData[]; user?: UserProfile; isAdmin?: boolean }) {
+  // 관리자 전용 컴포넌트는 비관리자에게서 제외
+  const visibleComponents = components.filter(c => !((c.config.admin_only as boolean) === true && !isAdmin))
+
   // 전체 페이지 단독 표시 컴포넌트 확인
-  const fullPageComp = components.find(c => c.config.full_page === true)
+  const fullPageComp = visibleComponents.find(c => c.config.full_page === true)
   if (fullPageComp) {
     const def = componentRegistry.get(fullPageComp.component_type)
     if (def) {
@@ -259,8 +380,8 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
   }
 
   // 그리드 전체 높이 계산 (빈 공간 없이 딱 맞게)
-  const gridRows = components.length > 0
-    ? Math.max(...components.map(c => (c.grid_y ?? 0) + (c.grid_h ?? 6)))
+  const gridRows = visibleComponents.length > 0
+    ? Math.max(...visibleComponents.map(c => (c.grid_y ?? 0) + (c.grid_h ?? 6)))
     : 0
 
   const showHeader = page.show_header !== false
@@ -299,7 +420,7 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
       )}
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: `${pt}px ${pr}px ${pb}px ${pl}px` }}>
-        {components.length === 0 ? (
+        {visibleComponents.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🧩</div>
             <p>아직 컨텐츠가 없습니다</p>
@@ -312,7 +433,7 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
             gap: `${GRID_GAP}px`,
             minHeight: gridRows > 0 ? `${gridRows * (GRID_ROW_HEIGHT + GRID_GAP) - GRID_GAP}px` : 'auto',
           }}>
-            {components.map(comp => {
+            {visibleComponents.map(comp => {
               const def = componentRegistry.get(comp.component_type)
               if (!def) return null
               const showBorder = (comp.config.show_border as boolean) !== false
