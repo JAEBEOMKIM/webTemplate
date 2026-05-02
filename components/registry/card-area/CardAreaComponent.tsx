@@ -447,14 +447,14 @@ function CardSheet({ card, mode, onClose }: { card: CardItem; mode: 'sheet' | 'm
     position: 'fixed', left: 0, right: 0, bottom: 0,
     background: 'var(--bg-primary)',
     borderTopLeftRadius: '20px', borderTopRightRadius: '20px',
-    maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+    maxHeight: '80dvh', display: 'flex', flexDirection: 'column',
     animation: closing ? 'caSheetIn 0.22s ease reverse' : 'caSheetIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1)',
     zIndex: 10001, boxShadow: '0 -8px 40px rgba(0,0,0,0.25)',
   } : {
     position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
     background: 'var(--bg-primary)',
     borderRadius: '16px',
-    width: 'min(92vw, 560px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+    width: 'min(92vw, 560px)', maxHeight: '80dvh', display: 'flex', flexDirection: 'column',
     animation: closing ? 'caModalIn 0.2s ease reverse' : 'caModalIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)',
     zIndex: 10001, boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
   }

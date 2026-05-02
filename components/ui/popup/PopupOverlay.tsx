@@ -38,7 +38,12 @@ export default function PopupOverlay({ open, config, parentComponentId, pageId, 
     setClosing(true)
   }, [closing])
 
-  const onAnimEnd = useCallback(() => {
+  const onAnimEnd = useCallback((e: React.AnimationEvent<HTMLDivElement>) => {
+    // 자식 요소(예: ImageGallery 내부 키프레임 애니메이션)의 종료 이벤트가 버블링되어
+    // 잘못된 시점에 onClose() 가 호출되는 것을 방지
+    if (e.target !== e.currentTarget) return
+    // 백드롭의 known 키프레임만 통과시켜 추가 안전장치
+    if (e.animationName !== 'popupBackdropOut' && e.animationName !== 'popupBackdropIn') return
     if (closing) {
       setClosing(false)
       onClose()
@@ -125,7 +130,7 @@ export default function PopupOverlay({ open, config, parentComponentId, pageId, 
           borderRadius: isModal ? '24px' : '24px 24px 0 0',
           maxWidth: '480px',
           width: '100%',
-          maxHeight: isModal ? '85vh' : '90vh',
+          maxHeight: '80dvh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
