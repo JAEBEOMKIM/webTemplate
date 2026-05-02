@@ -267,7 +267,14 @@ function QuickInfo({ items }: { items: InfoItem[] }) {
             >
               <span
                 className="material-symbols-outlined"
-                style={{ color: 'var(--accent)', fontSize: '24px', lineHeight: 1 }}
+                style={{
+                  color: 'var(--accent)',
+                  // 아이콘 글자 크기를 해당 row 의 텍스트 크기와 동일하게 + Bold (variable font wght 700)
+                  fontSize: isFirst ? '16px' : '14px',
+                  lineHeight: 1,
+                  fontWeight: 700,
+                  fontVariationSettings: "'wght' 700",
+                }}
                 aria-hidden="true"
               >
                 {item.icon}
@@ -276,11 +283,11 @@ function QuickInfo({ items }: { items: InfoItem[] }) {
             <div style={{ flex: 1, minWidth: 0, paddingTop: '2px' }}>
               <p style={{
                 margin: 0,
-                // 첫 항목: 본문 크기 + 굵게 (라벨/타이틀 역할)
-                // 그 외 항목: secondary 와 동일한 스타일 (작은 muted 텍스트)
+                // 첫 항목: 본문 크기 / 그 외 항목: secondary 와 동일한 작은 muted 스타일
+                // 주 텍스트는 굵게 표시하지 않음 (강조는 아이콘 영역에 위임)
                 fontSize: isFirst ? '16px' : '14px',
                 lineHeight: isFirst ? '24px' : '20px',
-                fontWeight: isFirst ? 700 : 400,
+                fontWeight: 400,
                 color: isFirst ? 'var(--text-primary)' : 'var(--text-muted)',
                 wordBreak: 'break-word',
               }}>
