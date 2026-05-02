@@ -116,7 +116,7 @@ export default function PopupOverlay({ open, config, parentComponentId, pageId, 
         background: 'rgba(0,0,0,0.5)',
         backdropFilter: 'blur(4px)',
         padding: isModal ? '20px' : '0',
-        animation: `${closing ? 'popupBackdropOut' : 'popupBackdropIn'} ${closing ? '200ms' : '250ms'} ease forwards`,
+        animation: `${closing ? 'popupBackdropOut' : 'popupBackdropIn'} ${closing ? '380ms' : '420ms'} cubic-bezier(0.32, 0.72, 0, 1) forwards`,
       }}
       onClick={e => { if (e.target === e.currentTarget) handleClose() }}
       onAnimationEnd={onAnimEnd}
@@ -136,8 +136,8 @@ export default function PopupOverlay({ open, config, parentComponentId, pageId, 
           overflow: 'hidden',
           boxShadow: '0 24px 80px rgba(0,0,0,0.18)',
           animation: closing
-            ? `${isModal ? 'popupModalOut' : 'popupSlideOut'} 200ms ease forwards`
-            : `${isModal ? 'popupModalIn' : 'popupSlideIn'} 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards`,
+            ? `${isModal ? 'popupModalOut' : 'popupSlideOut'} 380ms cubic-bezier(0.32, 0.72, 0, 1) forwards`
+            : `${isModal ? 'popupModalIn' : 'popupSlideIn'} 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards`,
         }}
         onClick={e => e.stopPropagation()}
       >

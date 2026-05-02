@@ -439,7 +439,7 @@ function CardSheet({ card, mode, onClose }: { card: CardItem; mode: 'sheet' | 'm
   const [closing, setClosing] = useState(false)
   const close = () => {
     setClosing(true)
-    setTimeout(onClose, 220)
+    setTimeout(onClose, 380)
   }
 
   const isSheet = mode === 'sheet'
@@ -448,14 +448,14 @@ function CardSheet({ card, mode, onClose }: { card: CardItem; mode: 'sheet' | 'm
     background: 'var(--bg-primary)',
     borderTopLeftRadius: '20px', borderTopRightRadius: '20px',
     maxHeight: '80dvh', display: 'flex', flexDirection: 'column',
-    animation: closing ? 'caSheetIn 0.22s ease reverse' : 'caSheetIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1)',
+    animation: closing ? 'caSheetIn 0.38s cubic-bezier(0.32, 0.72, 0, 1) reverse' : 'caSheetIn 0.52s cubic-bezier(0.16, 1, 0.3, 1)',
     zIndex: 10001, boxShadow: '0 -8px 40px rgba(0,0,0,0.25)',
   } : {
     position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
     background: 'var(--bg-primary)',
     borderRadius: '16px',
     width: 'min(92vw, 560px)', maxHeight: '80dvh', display: 'flex', flexDirection: 'column',
-    animation: closing ? 'caModalIn 0.2s ease reverse' : 'caModalIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)',
+    animation: closing ? 'caModalIn 0.32s cubic-bezier(0.32, 0.72, 0, 1) reverse' : 'caModalIn 0.46s cubic-bezier(0.16, 1, 0.3, 1)',
     zIndex: 10001, boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
   }
 
@@ -464,7 +464,7 @@ function CardSheet({ card, mode, onClose }: { card: CardItem; mode: 'sheet' | 'm
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
         zIndex: 10000,
-        animation: closing ? 'caBackdropIn 0.22s ease reverse' : 'caBackdropIn 0.22s ease',
+        animation: closing ? 'caBackdropIn 0.38s ease reverse' : 'caBackdropIn 0.42s ease',
       }}
       onClick={close}
     >

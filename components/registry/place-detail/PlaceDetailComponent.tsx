@@ -93,12 +93,20 @@ export function PlaceDetailComponent({ componentId, pageId, config, isAdmin }: C
           {cfg.gallery_section_title && (
             <SectionTitle>{cfg.gallery_section_title}</SectionTitle>
           )}
-          <ImageGalleryComponent
-            componentId={`${componentId}-gallery`}
-            pageId={pageId}
-            config={cfg.gallery_config ?? EMPTY_CONFIG}
-            isAdmin={isAdmin}
-          />
+          <div style={{
+            position: 'relative',
+            height: `${(cfg.gallery_config as { height?: number })?.height ?? 320}px`,
+            borderRadius: '12px',
+            overflow: 'hidden',
+            border: '1px solid var(--border)',
+          }}>
+            <ImageGalleryComponent
+              componentId={`${componentId}-gallery`}
+              pageId={pageId}
+              config={cfg.gallery_config ?? EMPTY_CONFIG}
+              isAdmin={isAdmin}
+            />
+          </div>
         </section>
       )}
 
@@ -108,12 +116,21 @@ export function PlaceDetailComponent({ componentId, pageId, config, isAdmin }: C
           {cfg.map_section_title && (
             <SectionTitle>{cfg.map_section_title}</SectionTitle>
           )}
-          <KakaoMapComponent
-            componentId={`${componentId}-map`}
-            pageId={pageId}
-            config={cfg.map_config ?? EMPTY_CONFIG}
-            isAdmin={isAdmin}
-          />
+          {/* 명시적 높이 wrapper — KakaoMap의 height:100% 캐스케이드를 위해 부모에 고정 픽셀 높이 필요 */}
+          <div style={{
+            position: 'relative',
+            height: `${(cfg.map_config as { height?: number })?.height ?? 240}px`,
+            borderRadius: '12px',
+            overflow: 'hidden',
+            border: '1px solid var(--border)',
+          }}>
+            <KakaoMapComponent
+              componentId={`${componentId}-map`}
+              pageId={pageId}
+              config={cfg.map_config ?? EMPTY_CONFIG}
+              isAdmin={isAdmin}
+            />
+          </div>
         </section>
       )}
 
@@ -123,12 +140,14 @@ export function PlaceDetailComponent({ componentId, pageId, config, isAdmin }: C
           {cfg.share_section_title && (
             <SectionTitle>{cfg.share_section_title}</SectionTitle>
           )}
-          <ShareComponent
-            componentId={`${componentId}-share`}
-            pageId={pageId}
-            config={cfg.share_config ?? EMPTY_CONFIG}
-            isAdmin={isAdmin}
-          />
+          <div style={{ position: 'relative' }}>
+            <ShareComponent
+              componentId={`${componentId}-share`}
+              pageId={pageId}
+              config={cfg.share_config ?? EMPTY_CONFIG}
+              isAdmin={isAdmin}
+            />
+          </div>
         </section>
       )}
     </div>
