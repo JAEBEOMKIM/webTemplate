@@ -276,10 +276,12 @@ function QuickInfo({ items }: { items: InfoItem[] }) {
             <div style={{ flex: 1, minWidth: 0, paddingTop: '2px' }}>
               <p style={{
                 margin: 0,
-                fontSize: '16px',
-                lineHeight: '24px',
+                // 첫 항목: 본문 크기 + 굵게 (라벨/타이틀 역할)
+                // 그 외 항목: secondary 와 동일한 스타일 (작은 muted 텍스트)
+                fontSize: isFirst ? '16px' : '14px',
+                lineHeight: isFirst ? '24px' : '20px',
                 fontWeight: isFirst ? 700 : 400,
-                color: 'var(--text-primary)',
+                color: isFirst ? 'var(--text-primary)' : 'var(--text-muted)',
                 wordBreak: 'break-word',
               }}>
                 {item.primary}
@@ -301,11 +303,13 @@ function QuickInfo({ items }: { items: InfoItem[] }) {
                   flexShrink: 0,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  padding: '6px 10px',
-                  borderRadius: '999px',
-                  fontSize: '12px',
+                  justifyContent: 'center',
+                  // 본문(16px) 의 80% ≈ 12.8px
+                  fontSize: '12.8px',
+                  lineHeight: 1.2,
                   fontWeight: 600,
+                  padding: '5px 10px',
+                  borderRadius: '999px',
                   color: copied ? 'var(--accent)' : 'var(--text-muted)',
                   background: copied ? 'rgba(59,130,246,0.1)' : 'var(--bg-secondary)',
                   border: '1px solid var(--border)',
@@ -319,9 +323,6 @@ function QuickInfo({ items }: { items: InfoItem[] }) {
                 onMouseUp={e => e.currentTarget.style.transform = ''}
                 onMouseLeave={e => e.currentTarget.style.transform = ''}
               >
-                <span className="material-symbols-outlined" aria-hidden="true" style={{ fontSize: '16px', lineHeight: 1 }}>
-                  {copied ? 'check' : 'content_copy'}
-                </span>
                 {copied ? '복사됨' : '복사'}
               </button>
             )}
