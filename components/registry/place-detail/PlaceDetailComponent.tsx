@@ -204,50 +204,130 @@ function PhotoStrip({ photos }: { photos: PhotoItem[] }) {
 }
 
 function QuickInfo({ items }: { items: InfoItem[] }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    // 첫 번째 항목을 제외한 나머지 항목들의 primary + secondary 를 줄바꿈으로 결합
+    const text = items
+      .slice(1)
+      .map(it => [it.primary, it.secondary].filter(Boolean).join('\n'))
+      .filter(Boolean)
+      .join('\n')
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // fallback (오래된 브라우저용)
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand('copy') } catch {}
+      document.body.removeChild(ta)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }
+  }
+
+  // 복사 가능한 텍스트가 실제로 있는지 (2번째 항목 이후 텍스트 존재 여부)
+  const hasCopyContent = items
+    .slice(1)
+    .some(it => (it.primary || it.secondary || '').trim().length > 0)
+
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      {items.map((item, idx) => (
-        <div
-          key={item.id}
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '16px',
-            paddingBottom: idx === items.length - 1 ? '0' : '16px',
-            borderBottom: idx === items.length - 1 ? 'none' : '1px solid var(--border)',
-          }}
-        >
+      {items.map((item, idx) => {
+        const isFirst = idx === 0
+        const isLast = idx === items.length - 1
+        return (
           <div
+            key={item.id}
             style={{
-              background: 'var(--bg-secondary)',
-              padding: '8px',
-              borderRadius: '12px',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
+              alignItems: 'flex-start',
+              gap: '16px',
+              paddingBottom: isLast ? '0' : '16px',
+              borderBottom: isLast ? 'none' : '1px solid var(--border)',
             }}
           >
-            <span
-              className="material-symbols-outlined"
-              style={{ color: 'var(--accent)', fontSize: '24px', lineHeight: 1 }}
-              aria-hidden="true"
+            <div
+              style={{
+                background: 'var(--bg-secondary)',
+                padding: '8px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
             >
-              {item.icon}
-            </span>
-          </div>
-          <div style={{ flex: 1, minWidth: 0, paddingTop: '2px' }}>
-            <p style={{ margin: 0, fontSize: '16px', lineHeight: '24px', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
-              {item.primary}
-            </p>
-            {item.secondary && (
-              <p style={{ margin: '2px 0 0 0', fontSize: '14px', lineHeight: '20px', color: 'var(--text-muted)', wordBreak: 'break-word' }}>
-                {item.secondary}
+              <span
+                className="material-symbols-outlined"
+                style={{ color: 'var(--accent)', fontSize: '24px', lineHeight: 1 }}
+                aria-hidden="true"
+              >
+                {item.icon}
+              </span>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, paddingTop: '2px' }}>
+              <p style={{
+                margin: 0,
+                fontSize: '16px',
+                lineHeight: '24px',
+                fontWeight: isFirst ? 700 : 400,
+                color: 'var(--text-primary)',
+                wordBreak: 'break-word',
+              }}>
+                {item.primary}
               </p>
+              {item.secondary && (
+                <p style={{ margin: '2px 0 0 0', fontSize: '14px', lineHeight: '20px', color: 'var(--text-muted)', wordBreak: 'break-word' }}>
+                  {item.secondary}
+                </p>
+              )}
+            </div>
+            {/* 첫 번째 항목 우측에 복사 버튼 — 2번째 이후 모든 항목의 텍스트를 클립보드에 복사 */}
+            {isFirst && hasCopyContent && (
+              <button
+                type="button"
+                onClick={handleCopy}
+                aria-label={copied ? '복사됨' : '정보 복사'}
+                title={copied ? '복사됨' : '아래 정보 복사하기'}
+                style={{
+                  flexShrink: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 10px',
+                  borderRadius: '999px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: copied ? 'var(--accent)' : 'var(--text-muted)',
+                  background: copied ? 'rgba(59,130,246,0.1)' : 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s ease, color 0.2s ease, transform 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  alignSelf: 'flex-start',
+                  marginTop: '2px',
+                }}
+                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.96)'}
+                onMouseUp={e => e.currentTarget.style.transform = ''}
+                onMouseLeave={e => e.currentTarget.style.transform = ''}
+              >
+                <span className="material-symbols-outlined" aria-hidden="true" style={{ fontSize: '16px', lineHeight: 1 }}>
+                  {copied ? 'check' : 'content_copy'}
+                </span>
+                {copied ? '복사됨' : '복사'}
+              </button>
             )}
           </div>
-        </div>
-      ))}
+        )
+      })}
     </section>
   )
 }
