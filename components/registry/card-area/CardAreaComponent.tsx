@@ -10,6 +10,7 @@ type BackgroundType = 'color' | 'gradient' | 'image'
 type HoverAnim = 'none' | 'lift' | 'zoom' | 'tilt' | 'shine' | 'glow'
 type AspectRatio = 'auto' | '1/1' | '4/3' | '3/4' | '16/9' | '9/16' | '3/2' | '2/3'
 type LayoutType = 'grid' | 'horizontal-scroll'
+type GridAxis = 'columns' | 'rows'  // 그리드 기준 축: 열 고정(가로 wrap) vs 행 고정(가로 스크롤)
 
 interface CardItem {
   id: string
@@ -44,8 +45,13 @@ interface CardAreaConfig {
   title?: string
   subtitle?: string
   layout?: LayoutType
+  // 그리드 기준 축 — 'columns'(기본): 열수 고정, 카드는 다음 줄로 wrap
+  //              'rows':    행수 고정, 카드는 다음 컬럼으로 wrap (가로 스크롤)
+  grid_axis?: GridAxis
   columns_desktop?: number
   columns_mobile?: number
+  rows_desktop?: number
+  rows_mobile?: number
   gap?: number
   card_radius?: number
   enable_entry_animation?: boolean
@@ -58,11 +64,15 @@ export function CardAreaComponent({ config }: ComponentProps) {
   const cfg = config as unknown as CardAreaConfig
   const cards = cfg.cards ?? []
   const layout: LayoutType = cfg.layout ?? 'grid'
+  const gridAxis: GridAxis = cfg.grid_axis ?? 'columns'
   const colsDesktop = Math.max(1, Math.min(8, cfg.columns_desktop ?? 3))
   const colsMobile = Math.max(1, Math.min(4, cfg.columns_mobile ?? 1))
+  const rowsDesktop = Math.max(1, Math.min(8, cfg.rows_desktop ?? 2))
+  const rowsMobile = Math.max(1, Math.min(4, cfg.rows_mobile ?? 1))
   const gap = cfg.gap ?? 16
   const radius = cfg.card_radius ?? 16
   const entryAnim = cfg.enable_entry_animation !== false
+  const isRowsMode = layout === 'grid' && gridAxis === 'rows'
 
   const [activeSheet, setActiveSheet] = useState<{ card: CardItem; mode: 'sheet' | 'modal' } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -259,11 +269,22 @@ export function CardAreaComponent({ config }: ComponentProps) {
   }
 
   const containerStyle: React.CSSProperties = layout === 'grid'
-    ? {
+    ? (isRowsMode ? {
+        // 행수 고정: 카드는 컬럼 방향으로 흐르고 가로 스크롤
+        display: 'grid',
+        gap: `${gap}px`,
+        gridTemplateRows: `repeat(var(--ca-rows, ${rowsDesktop}), auto)`,
+        gridAutoFlow: 'column',
+        gridAutoColumns: 'minmax(220px, 1fr)',
+        overflowX: 'auto',
+        scrollSnapType: 'x mandatory',
+        paddingBottom: '8px',
+      } : {
+        // 열수 고정 (기본): 카드는 다음 줄로 wrap
         display: 'grid',
         gap: `${gap}px`,
         gridTemplateColumns: `repeat(var(--ca-cols, ${colsDesktop}), minmax(0, 1fr))`,
-      }
+      })
     : {
         display: 'flex',
         gap: `${gap}px`,
@@ -298,17 +319,28 @@ export function CardAreaComponent({ config }: ComponentProps) {
           카드를 추가해 주세요
         </div>
       ) : (
-        <div className="ca-grid" style={containerStyle}>
+        <div className={`ca-grid ca-axis-${gridAxis}`} style={containerStyle}>
           {cards.map((card, idx) => (
             <div
               key={card.id}
-              style={layout === 'horizontal-scroll' ? {
-                flex: `0 0 ${100 / colsDesktop}%`,
-                minWidth: '220px',
-                scrollSnapAlign: 'start',
-              } : card.span && card.span > 1 ? {
-                gridColumn: `span ${Math.min(card.span, colsDesktop)}`,
-              } : undefined}
+              style={
+                layout === 'horizontal-scroll' ? {
+                  flex: `0 0 ${100 / colsDesktop}%`,
+                  minWidth: '220px',
+                  scrollSnapAlign: 'start',
+                }
+                : isRowsMode ? {
+                  // 행 고정 모드: span 적용 시 gridRow span 으로 변환 (카드가 여러 행 차지)
+                  scrollSnapAlign: 'start',
+                  ...(card.span && card.span > 1
+                    ? { gridRow: `span ${Math.min(card.span, rowsDesktop)}` }
+                    : {}),
+                }
+                : card.span && card.span > 1 ? {
+                  gridColumn: `span ${Math.min(card.span, colsDesktop)}`,
+                }
+                : undefined
+              }
             >
               {renderCard(card, idx)}
             </div>
@@ -332,13 +364,14 @@ export function CardAreaComponent({ config }: ComponentProps) {
         .ca-btn:hover .ca-arrow { transform: translateX(4px); }
         .ca-btn:active { transform: scale(0.96); }
         @media (max-width: 640px) {
-          .ca-grid { --ca-cols: var(--ca-cols-mobile, 1) !important; }
+          .ca-grid.ca-axis-columns { --ca-cols: var(--ca-cols-mobile, 1) !important; }
+          .ca-grid.ca-axis-rows { --ca-rows: var(--ca-rows-mobile, 1) !important; }
         }
         @keyframes caSheetIn { from { transform: translateY(100%) } to { transform: translateY(0) } }
         @keyframes caModalIn { from { opacity: 0; transform: scale(0.94) } to { opacity: 1; transform: scale(1) } }
         @keyframes caBackdropIn { from { opacity: 0 } to { opacity: 1 } }
       `}</style>
-      <style>{`.ca-grid { --ca-cols-mobile: ${colsMobile}; }`}</style>
+      <style>{`.ca-grid { --ca-cols-mobile: ${colsMobile}; --ca-rows-mobile: ${rowsMobile}; }`}</style>
     </div>
   )
 }
@@ -633,21 +666,54 @@ export function CardAreaConfigForm({ config, onChange }: ConfigFormProps) {
               onChange={e => set({ layout: e.target.value as LayoutType })}
             >
               <option value="grid">그리드</option>
-              <option value="horizontal-scroll">가로 스크롤</option>
+              <option value="horizontal-scroll">가로 스크롤 (단일 줄)</option>
             </select>
           </div>
           <div>
             <label style={miniLabelStyle}>간격 (px)</label>
             <input className="input" type="number" min={0} max={64} value={cfg.gap ?? 16} onChange={e => set({ gap: Number(e.target.value) })} />
           </div>
-          <div>
-            <label style={miniLabelStyle}>데스크탑 열수</label>
-            <input className="input" type="number" min={1} max={8} value={cfg.columns_desktop ?? 3} onChange={e => set({ columns_desktop: Number(e.target.value) })} />
-          </div>
-          <div>
-            <label style={miniLabelStyle}>모바일 열수</label>
-            <input className="input" type="number" min={1} max={4} value={cfg.columns_mobile ?? 1} onChange={e => set({ columns_mobile: Number(e.target.value) })} />
-          </div>
+
+          {/* 그리드 모드일 때만 축 선택 표시 */}
+          {(cfg.layout ?? 'grid') === 'grid' && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={miniLabelStyle}>그리드 기준 축</label>
+              <select
+                className="input"
+                value={cfg.grid_axis ?? 'columns'}
+                onChange={e => set({ grid_axis: e.target.value as GridAxis })}
+              >
+                <option value="columns">열(가로칸)수 고정 — 카드가 다음 줄로 wrap</option>
+                <option value="rows">행(세로줄)수 고정 — 카드가 다음 컬럼으로 wrap (가로 스크롤)</option>
+              </select>
+            </div>
+          )}
+
+          {/* 축에 따라 입력 필드가 바뀜 */}
+          {(cfg.grid_axis ?? 'columns') === 'rows' && (cfg.layout ?? 'grid') === 'grid' ? (
+            <>
+              <div>
+                <label style={miniLabelStyle}>데스크탑 행수</label>
+                <input className="input" type="number" min={1} max={8} value={cfg.rows_desktop ?? 2} onChange={e => set({ rows_desktop: Number(e.target.value) })} />
+              </div>
+              <div>
+                <label style={miniLabelStyle}>모바일 행수</label>
+                <input className="input" type="number" min={1} max={4} value={cfg.rows_mobile ?? 1} onChange={e => set({ rows_mobile: Number(e.target.value) })} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label style={miniLabelStyle}>데스크탑 열수</label>
+                <input className="input" type="number" min={1} max={8} value={cfg.columns_desktop ?? 3} onChange={e => set({ columns_desktop: Number(e.target.value) })} />
+              </div>
+              <div>
+                <label style={miniLabelStyle}>모바일 열수</label>
+                <input className="input" type="number" min={1} max={4} value={cfg.columns_mobile ?? 1} onChange={e => set({ columns_mobile: Number(e.target.value) })} />
+              </div>
+            </>
+          )}
+
           <div>
             <label style={miniLabelStyle}>카드 모서리(px)</label>
             <input className="input" type="number" min={0} max={32} value={cfg.card_radius ?? 16} onChange={e => set({ card_radius: Number(e.target.value) })} />
