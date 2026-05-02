@@ -221,6 +221,7 @@ export const componentRegistry = new Map<string, ComponentDefinition>([
         },
         {
           id: 'card-sample-3',
+          trigger_id: 'card-contact',
           title: '문의하기',
           subtitle: 'CONTACT',
           description: '궁금한 점이 있으면 언제든 연락주세요.',

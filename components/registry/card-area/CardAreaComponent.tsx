@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import type { ComponentProps, ConfigFormProps } from '../types'
 
 // ── 타입 정의 ─────────────────────────────────────────────────
-type ActionType = 'none' | 'link' | 'sheet' | 'modal'
+type ActionType = 'none' | 'link' | 'sheet' | 'modal' | 'popup'
 type BackgroundType = 'color' | 'gradient' | 'image'
 type HoverAnim = 'none' | 'lift' | 'zoom' | 'tilt' | 'shine' | 'glow'
 type AspectRatio = 'auto' | '1/1' | '4/3' | '3/4' | '16/9' | '9/16' | '3/2' | '2/3'
@@ -12,6 +13,7 @@ type LayoutType = 'grid' | 'horizontal-scroll'
 
 interface CardItem {
   id: string
+  trigger_id?: string  // 외부 팝업 이벤트 바인딩용 식별자 (data-trigger-id 속성에 부착)
   title?: string
   subtitle?: string
   description?: string
@@ -105,6 +107,8 @@ export function CardAreaComponent({ config }: ComponentProps) {
       e.preventDefault()
       setActiveSheet({ card, mode: card.action_type })
     }
+    // 'popup' 액션: data-trigger-id 로 외부 팝업 시스템(usePopupTriggers)에 위임
+    // 'none': 아무 동작도 하지 않음
   }
 
   const renderCardInner = (card: CardItem, idx: number) => {
@@ -118,6 +122,7 @@ export function CardAreaComponent({ config }: ComponentProps) {
       <div
         className={`ca-card ca-hover-${card.hover_anim || 'lift'}`}
         data-card-id={card.id}
+        data-trigger-id={card.trigger_id || undefined}
         ref={el => {
           if (el) cardRefs.current.set(card.id, el)
           else cardRefs.current.delete(card.id)
@@ -229,7 +234,7 @@ export function CardAreaComponent({ config }: ComponentProps) {
               display: 'flex', alignItems: 'center', gap: '4px',
               opacity: 0.9,
             }}>
-              {card.action_type === 'link' ? '바로가기' : '자세히 보기'}
+              {card.action_type === 'link' ? '바로가기' : card.action_type === 'popup' ? '열기' : '자세히 보기'}
               <span className="ca-arrow" style={{ transition: 'transform 0.3s ease', display: 'inline-block' }}>→</span>
             </div>
           )}
@@ -623,6 +628,42 @@ function CardEditor({ card, index, total, onUpdate, onRemove, onMove }: {
   onMove: (dir: -1 | 1) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const supabase = createClient()
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+      const path = `card-area/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage
+        .from('gallery-images')
+        .upload(path, file, { cacheControl: '3600', upsert: false })
+      if (error) {
+        setUploadError(`업로드 실패: ${error.message}`)
+        return
+      }
+      // 이전 업로드 이미지가 있으면 삭제
+      if (card.bg_image && card.bg_image.includes('/gallery-images/')) {
+        try {
+          const oldPath = card.bg_image.split('/gallery-images/')[1]
+          if (oldPath) await supabase.storage.from('gallery-images').remove([decodeURIComponent(oldPath)])
+        } catch {}
+      }
+      const { data: urlData } = supabase.storage.from('gallery-images').getPublicUrl(path)
+      onUpdate({ bg_image: urlData.publicUrl, bg_type: 'image' })
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : '업로드 실패')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const previewBg = card.bg_type === 'image' && card.bg_image
     ? `url("${card.bg_image}") center/cover, var(--bg-secondary)`
@@ -713,8 +754,49 @@ function CardEditor({ card, index, total, onUpdate, onRemove, onMove }: {
             )}
 
             {card.bg_type === 'image' && (
-              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <input className="input" value={card.bg_image ?? ''} onChange={e => onUpdate({ bg_image: e.target.value })} placeholder="이미지 URL (https://...)" />
+              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* 업로드 + URL 입력 */}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    className="input"
+                    value={card.bg_image ?? ''}
+                    onChange={e => onUpdate({ bg_image: e.target.value })}
+                    placeholder="이미지 URL (또는 업로드)"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                  >
+                    {uploading ? '업로드중...' : '📷 업로드'}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+
+                {uploadError && (
+                  <div style={{ fontSize: '11px', color: 'var(--danger, #ef4444)', padding: '4px 8px', background: 'rgba(239,68,68,0.08)', borderRadius: '6px' }}>
+                    {uploadError}
+                  </div>
+                )}
+
+                {/* 미리보기 */}
+                {card.bg_image && (
+                  <div style={{
+                    height: '90px', borderRadius: '8px',
+                    background: `url("${card.bg_image}") center/cover, var(--bg-secondary)`,
+                    border: '1px solid var(--border)',
+                  }} />
+                )}
+
                 <div>
                   <label style={miniLabelStyle}>오버레이 농도 ({card.overlay_opacity ?? 0.3})</label>
                   <input type="range" min={0} max={1} step={0.05} value={card.overlay_opacity ?? 0.3} onChange={e => onUpdate({ overlay_opacity: Number(e.target.value) })} style={{ width: '100%' }} />
@@ -778,6 +860,7 @@ function CardEditor({ card, index, total, onUpdate, onRemove, onMove }: {
               <option value="link">링크 이동</option>
               <option value="sheet">바텀시트로 상세 보기</option>
               <option value="modal">모달로 상세 보기</option>
+              <option value="popup">외부 팝업 트리거 (ID 바인딩)</option>
             </select>
 
             {card.action_type === 'link' && (
@@ -811,6 +894,21 @@ function CardEditor({ card, index, total, onUpdate, onRemove, onMove }: {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* 팝업 트리거 ID — 모든 액션에서 사용 가능 (외부 팝업 시스템 바인딩) */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+            <label style={miniLabelStyle}>팝업 트리거 ID (선택)</label>
+            <input
+              className="input"
+              value={card.trigger_id ?? ''}
+              onChange={e => onUpdate({ trigger_id: e.target.value.trim() })}
+              placeholder="예: card-promo-1 (영문/숫자/하이픈)"
+            />
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+              값을 입력하면 카드에 <code style={{ background: 'var(--bg-primary)', padding: '1px 4px', borderRadius: '3px' }}>data-trigger-id=&quot;값&quot;</code> 속성이 부착됩니다.<br />
+              페이지 팝업 설정에서 <code style={{ background: 'var(--bg-primary)', padding: '1px 4px', borderRadius: '3px' }}>{`[data-trigger-id="값"]`}</code> 셀렉터로 클릭 이벤트를 바인딩할 수 있습니다.
+            </div>
           </div>
         </div>
       )}
