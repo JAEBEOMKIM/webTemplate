@@ -229,11 +229,11 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
           scrollBehavior: 'smooth',
         }}
       >
-        <div style={{ position: 'relative', paddingLeft: compactMode ? '68px' : '80px' }}>
+        <div style={{ position: 'relative', paddingLeft: compactMode ? '76px' : '88px' }}>
           {/* Thin timeline line */}
           <div style={{
             position: 'absolute',
-            left: compactMode ? '30px' : '36px',
+            left: compactMode ? '44px' : '52px',
             top: '6px', bottom: '6px',
             width: '1px',
             background: 'var(--border)',
@@ -278,7 +278,7 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
                   {/* Timeline dot */}
                   <div style={{
                     position: 'absolute',
-                    left: `${-(compactMode ? 68 : 80) + (compactMode ? 30 : 36) - 4}px`,
+                    left: `${-(compactMode ? 76 : 88) + (compactMode ? 44 : 52) - 4}px`,
                     top: compactMode ? '16px' : '20px',
                     width: '9px', height: '9px',
                     borderRadius: '50%',
@@ -292,10 +292,11 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
                   {/* Time label (left of timeline) */}
                   <div style={{
                     position: 'absolute',
-                    left: `${-(compactMode ? 68 : 80)}px`,
+                    left: `${-(compactMode ? 76 : 88)}px`,
                     top: compactMode ? '10px' : '14px',
-                    width: compactMode ? '24px' : '28px',
+                    width: compactMode ? '38px' : '44px',
                     textAlign: 'right',
+                    whiteSpace: 'nowrap',
                     transition: 'color 0.4s ease',
                   }}>
                     <div style={{
