@@ -221,18 +221,20 @@ function ComponentCell({ comp, def, page, isAdmin, showBorder, effectiveY, colla
     gridRow: `${effectiveY + 1} / span ${effectiveSpan}`,
     minWidth: 0, minHeight: 0,
     position: 'relative',
+    // 셀이 행 트랙을 stretch 하지 않고 콘텐츠 높이로 축소 → 컴포넌트 간 공백 제거
+    alignSelf: 'start',
     ...(showBorder ? {} : { background: 'transparent' }),
   }
 
   if (collapsed) {
     cellStyle.overflow = 'hidden'
   } else if (lockHeight) {
-    // 높이 고정: 스크롤 안 생김, 콘텐츠 작으면 축소, 크면 grid 사이즈로 캡
+    // 높이 고정: 콘텐츠 크면 grid_h 픽셀 크기로 캡 + 스크롤 비활성
     cellStyle.overflow = 'hidden'
-    cellStyle.alignSelf = 'start'
     cellStyle.maxHeight = `${cellMaxHeight}px`
   } else {
-    cellStyle.overflow = 'auto'
+    // 기본: 콘텐츠 그대로 — overflow visible (스크롤 없음, 페이지 자체가 스크롤됨)
+    cellStyle.overflow = 'visible'
   }
 
   return (
@@ -413,15 +415,6 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
     cumulativeSavings += Math.max(0, rowOriginalH - rowEffectiveH)
   }
 
-  // 그리드 전체 높이 — 압축 반영 (숨김 영역 제외, 접힘 1행으로 카운트)
-  const gridRows = visibleComponents.length > 0
-    ? Math.max(...visibleComponents.map(c => {
-        const effY = (c.grid_y ?? 0) - (yOffsetById.get(c.id) ?? 0)
-        const effH = collapsedIds.has(c.id) ? 1 : (c.grid_h ?? 6)
-        return effY + effH
-      }))
-    : 0
-
   const showHeader = page.show_header !== false
   const pt = page.padding_top ?? 20
   const pr = page.padding_right ?? 20
@@ -467,9 +460,10 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
           <div style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
-            gridAutoRows: `${GRID_ROW_HEIGHT}px`,
+            // 행 높이를 콘텐츠 기준으로 자동 산정 — 지정된 grid_h 보다 콘텐츠가 작으면
+            // 행 트랙도 함께 축소되어 컴포넌트 사이의 빈 공백이 사라짐
+            gridAutoRows: 'minmax(0, auto)',
             gap: `${GRID_GAP}px`,
-            minHeight: gridRows > 0 ? `${gridRows * (GRID_ROW_HEIGHT + GRID_GAP) - GRID_GAP}px` : 'auto',
           }}>
             {visibleComponents.map(comp => {
               const def = componentRegistry.get(comp.component_type)
