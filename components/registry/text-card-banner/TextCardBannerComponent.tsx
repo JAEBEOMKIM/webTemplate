@@ -27,6 +27,9 @@ interface CardBannerConfig {
   subtitle?: string
   subtitle_align?: 'left' | 'center' | 'right'
   subtitle_font_family?: string
+  subtitle_font_size?: number   // px (기본 13)
+  subtitle_font_weight?: number // 100~900 (기본 400)
+  subtitle_italic?: boolean     // 기울임 (기본 false)
   layout?: 'stack' | 'grid' | 'carousel'
   columns?: number
   gap?: number
@@ -358,7 +361,9 @@ export function TextCardBannerComponent({ config }: ComponentProps) {
           )}
           {c.subtitle && (
             <p style={{
-              fontSize: '13px',
+              fontSize: `${c.subtitle_font_size ?? 13}px`,
+              fontWeight: c.subtitle_font_weight ?? 400,
+              fontStyle: c.subtitle_italic ? 'italic' : 'normal',
               color: 'var(--text-muted)',
               margin: 0,
               lineHeight: 1.5,
@@ -548,9 +553,10 @@ export function TextCardBannerConfigForm({ config, onChange }: ConfigFormProps) 
           style={{ fontSize: '13px', resize: 'vertical', minHeight: '60px', fontFamily: 'inherit' }}
         />
 
-        {/* Subtitle 정렬 + 폰트 — Subtitle 이 입력되었을 때만 의미가 있으므로 항상 표시 */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-          <div style={{ flex: '0 0 auto' }}>
+        {/* Subtitle 스타일 — 정렬 / 크기 / 굵기 / 기울임 / 글꼴 */}
+        <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          {/* 정렬 */}
+          <div>
             <label style={{ ...labelStyle, fontSize: '10px' }}>정렬</label>
             <div style={{ display: 'flex', gap: '4px' }}>
               {([
@@ -587,7 +593,75 @@ export function TextCardBannerConfigForm({ config, onChange }: ConfigFormProps) 
               })}
             </div>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+
+          {/* 글자 크기 */}
+          <div>
+            <label style={{ ...labelStyle, fontSize: '10px' }}>글자 크기 (px)</label>
+            <input
+              type="number"
+              className="input"
+              min={8}
+              max={48}
+              value={c.subtitle_font_size ?? 13}
+              onChange={e => {
+                const n = parseInt(e.target.value)
+                set({ subtitle_font_size: Number.isFinite(n) ? n : undefined })
+              }}
+              style={{ fontSize: '12px' }}
+            />
+          </div>
+
+          {/* 굵기 */}
+          <div>
+            <label style={{ ...labelStyle, fontSize: '10px' }}>굵기</label>
+            <select
+              className="input"
+              value={String(c.subtitle_font_weight ?? 400)}
+              onChange={e => set({ subtitle_font_weight: parseInt(e.target.value) || 400 })}
+              style={{ fontSize: '12px' }}
+            >
+              <option value="300">Light (300)</option>
+              <option value="400">Regular (400)</option>
+              <option value="500">Medium (500)</option>
+              <option value="600">Semibold (600)</option>
+              <option value="700">Bold (700)</option>
+              <option value="800">Extrabold (800)</option>
+              <option value="900">Black (900)</option>
+            </select>
+          </div>
+
+          {/* 기울임 */}
+          <div>
+            <label style={{ ...labelStyle, fontSize: '10px' }}>기울임</label>
+            <button
+              type="button"
+              onClick={() => set({ subtitle_italic: !c.subtitle_italic })}
+              title="이탤릭 (Italic)"
+              aria-label="기울임 토글"
+              aria-pressed={!!c.subtitle_italic}
+              style={{
+                width: '32px', height: '32px',
+                border: `1px solid ${c.subtitle_italic ? 'var(--accent)' : 'var(--border)'}`,
+                background: c.subtitle_italic ? 'var(--accent)' : 'var(--bg-primary)',
+                color: c.subtitle_italic ? '#fff' : 'var(--text-muted)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 700,
+                fontStyle: 'italic',
+                fontFamily: 'serif',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+              }}
+            >
+              I
+            </button>
+          </div>
+
+          {/* 글꼴 (full width) */}
+          <div style={{ gridColumn: '1 / -1' }}>
             <label style={{ ...labelStyle, fontSize: '10px' }}>글꼴</label>
             <FontFamilySelect
               value={c.subtitle_font_family || 'inherit'}
