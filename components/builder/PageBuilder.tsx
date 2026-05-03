@@ -36,7 +36,7 @@ import { PreviewErrorBoundary } from './PreviewErrorBoundary'
 
 const COLS = 10
 const ROW_HEIGHT = 60
-const MAX_ROWS = 20
+const MAX_ROWS = 30
 
 const DEVICE_PRESETS = [
   { id: 'pc', label: 'PC', width: 1280 },
