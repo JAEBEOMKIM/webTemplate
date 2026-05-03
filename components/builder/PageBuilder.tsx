@@ -910,7 +910,7 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                       </div>
                       {(selectedComponent.config.admin_only as boolean) === true && (
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', margin: 0 }}>
-                          🔒 일반 방문자는 이 컴포넌트를 볼 수 없습니다. 관리자에게는 빨간 라벨과 함께 표시됩니다.
+                          🔒 페이지에서 완전히 숨겨집니다 (관리자 미리보기 포함). 차지하던 영역은 회수되어 다른 컴포넌트들이 위로 올라갑니다.<br />빌더 화면에서만 편집·확인이 가능합니다.
                         </p>
                       )}
 

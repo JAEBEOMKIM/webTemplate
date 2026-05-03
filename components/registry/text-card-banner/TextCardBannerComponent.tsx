@@ -352,7 +352,7 @@ export function TextCardBannerComponent({ config }: ComponentProps) {
             </h1>
           )}
           {c.subtitle && (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
               {c.subtitle}
             </p>
           )}
@@ -526,8 +526,14 @@ export function TextCardBannerConfigForm({ config, onChange }: ConfigFormProps) 
       </div>
       <div>
         <label style={labelStyle}>Subtitle</label>
-        <input className="input" value={c.subtitle || ''} placeholder="Optional subtitle"
-          onChange={e => set({ subtitle: e.target.value })} style={{ fontSize: '13px' }} />
+        <textarea
+          className="input"
+          rows={3}
+          value={c.subtitle || ''}
+          placeholder="Optional subtitle (줄바꿈으로 여러 줄 가능)"
+          onChange={e => set({ subtitle: e.target.value })}
+          style={{ fontSize: '13px', resize: 'vertical', minHeight: '60px', fontFamily: 'inherit' }}
+        />
       </div>
 
       {/* Layout */}

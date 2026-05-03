@@ -204,9 +204,8 @@ function ComponentCell({ comp, def, page, isAdmin, showBorder, effectiveY, colla
   const w = comp.grid_w ?? 10
   const h = comp.grid_h ?? 6
 
-  // 공통 옵션
+  // 공통 옵션 (admin_only 는 PageContent 에서 이미 필터링됨)
   const lockHeight = (comp.config.lock_height as boolean) === true
-  const adminOnly = (comp.config.admin_only as boolean) === true
   const collapsible = (comp.config.collapsible as boolean) === true
 
   // lock_height 모드: 그리드 셀 최대 높이 (h * row_height + (h-1) * gap)
@@ -214,7 +213,7 @@ function ComponentCell({ comp, def, page, isAdmin, showBorder, effectiveY, colla
 
   // 셀 스타일 결정
   // 접힘 상태: gridRow span = 1 (1 그리드 행만 차지) → 다른 컴포넌트들이 위로 올라옴
-  //           overflow: hidden 으로 콘텐츠를 잘라서 상단 1행만 노출 (제목/타이틀 영역)
+  //           컴포넌트 자체는 렌더하지 않고 헤더 바(제목 + 토글 버튼)만 표시
   const effectiveSpan = collapsed ? 1 : h
 
   const cellStyle: React.CSSProperties = {
@@ -243,21 +242,6 @@ function ComponentCell({ comp, def, page, isAdmin, showBorder, effectiveY, colla
         className={showBorder ? 'card' : undefined}
         style={cellStyle}
       >
-        {/* 관리자 전용 표시 — 관리자에게만 노출 */}
-        {adminOnly && isAdmin && (
-          <div style={{
-            position: 'absolute', top: '6px', left: '6px', zIndex: 5,
-            fontSize: '10px', fontWeight: 600,
-            background: 'rgba(239, 68, 68, 0.92)', color: '#fff',
-            padding: '2px 8px', borderRadius: '6px',
-            letterSpacing: '0.02em',
-            pointerEvents: 'none',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-          }}>
-            🔒 관리자 전용
-          </div>
-        )}
-
         {/* 접기/펼치기 토글 버튼 */}
         {collapsible && (
           <button
@@ -286,8 +270,33 @@ function ComponentCell({ comp, def, page, isAdmin, showBorder, effectiveY, colla
           </button>
         )}
 
-        {/* 콘텐츠는 항상 렌더링 — 접힘 시 overflow:hidden 로 상단(제목 영역)만 보임 */}
-        <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
+        {/* 접힘: 컴포넌트 자체는 렌더하지 않고, 토글 버튼이 있는 헤더 라인만 표시
+             펼침: 컴포넌트 정상 렌더 */}
+        {collapsed ? (
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 40px 0 16px',  // 우측 padding은 toggle 버튼 영역 확보
+            overflow: 'hidden',
+          }}>
+            <span style={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: '14px',
+              fontWeight: 600,
+              color: 'var(--text-primary)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {(comp.config.title as string) || (comp.config.heading as string) || (comp.config.section_title as string) || ''}
+            </span>
+          </div>
+        ) : (
+          <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
+        )}
       </div>
       {activePopup && !collapsed && (
         <PopupOverlay open config={activePopup} parentComponentId={comp.id} pageId={page.id} onClose={close} />
@@ -304,24 +313,9 @@ function FullPageCell({ comp, def, page, isAdmin }: {
   const popups = (comp.config.popups as PopupConfig[] | undefined)
   const { activePopup, close } = usePopupTriggers(comp.id, popups, containerRef)
 
-  const adminOnly = (comp.config.admin_only as boolean) === true
-
   return (
     <>
-      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', position: 'relative' }}>
-        {adminOnly && isAdmin && (
-          <div style={{
-            position: 'fixed', top: '12px', left: '12px', zIndex: 100,
-            fontSize: '11px', fontWeight: 600,
-            background: 'rgba(239, 68, 68, 0.92)', color: '#fff',
-            padding: '4px 10px', borderRadius: '6px',
-            letterSpacing: '0.02em',
-            pointerEvents: 'none',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-          }}>
-            🔒 관리자 전용
-          </div>
-        )}
+      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh' }}>
         <def.Component componentId={comp.id} config={comp.config} pageId={page.id} isAdmin={isAdmin} />
       </div>
       {activePopup && (
@@ -337,8 +331,10 @@ const GRID_ROW_HEIGHT = 60 // px
 const GRID_GAP = 8 // px
 
 function PageContent({ page, components, user, isAdmin }: { page: PageData; components: PageComponentData[]; user?: UserProfile; isAdmin?: boolean }) {
-  // 관리자 전용 컴포넌트는 비관리자에게서 제외
-  const visibleComponents = components.filter(c => !((c.config.admin_only as boolean) === true && !isAdmin))
+  // 숨김(admin_only) 컴포넌트는 모든 사용자(관리자 포함)에게 페이지에서 비표시
+  // — 관리자가 미리보기/편집 시에는 빌더 화면에서 확인 가능
+  const isHidden = (c: PageComponentData) => (c.config.admin_only as boolean) === true
+  const visibleComponents = components.filter(c => !isHidden(c))
 
   // ── 접기/펼치기 상태 (전역 관리 — 레이아웃 압축을 위해) ─────────────
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
@@ -374,7 +370,7 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
     })
   }
 
-  // 전체 페이지 단독 표시 컴포넌트 확인
+  // 전체 페이지 단독 표시 컴포넌트 확인 (숨김된 것은 visibleComponents 에서 이미 제외됨)
   const fullPageComp = visibleComponents.find(c => c.config.full_page === true)
   if (fullPageComp) {
     const def = componentRegistry.get(fullPageComp.component_type)
@@ -383,28 +379,41 @@ function PageContent({ page, components, user, isAdmin }: { page: PageData; comp
     }
   }
 
-  // ── 레이아웃 압축 — 접힘 컴포넌트가 차지한 공간만큼 아래 컴포넌트들을 위로 끌어올림 ─
-  // 같은 row 의 컴포넌트들은 함께 처리하며, row 의 effective height 는
-  // 접힘 안 된 컴포넌트가 1개라도 있으면 그 중 max h, 모두 접혔으면 1
+  // ── 레이아웃 압축 — 숨김/접힘 컴포넌트가 차지한 공간만큼 아래 컴포넌트들을 위로 끌어올림 ─
+  // 압축 알고리즘은 ALL components 를 그룹화한다 (숨김 컴포넌트가 차지했던 row 도 회수해야 하므로):
+  //   - 숨김(admin_only): row 에서 effective_h = 0 으로 취급 → 전체 영역 회수
+  //   - 접힘(collapsed): effective_h = 1 (같은 row 에 접힘 안 된 컴포넌트 없을 때만)
+  //   - 일반: effective_h = grid_h
   const yOffsetById = new Map<string, number>()
   const rowGroups = new Map<number, PageComponentData[]>()
-  for (const c of visibleComponents) {
+  for (const c of components) {  // ALL — 숨김도 포함하여 그룹화
     const y = c.grid_y ?? 0
     if (!rowGroups.has(y)) rowGroups.set(y, [])
     rowGroups.get(y)!.push(c)
   }
   let cumulativeSavings = 0
   for (const [, comps] of [...rowGroups.entries()].sort(([a], [b]) => a - b)) {
-    for (const c of comps) yOffsetById.set(c.id, cumulativeSavings)
-    const nonCollapsed = comps.filter(c => !collapsedIds.has(c.id))
-    const rowEffectiveH = nonCollapsed.length > 0
-      ? Math.max(...nonCollapsed.map(c => c.grid_h ?? 6))
-      : 1  // 모두 접혔으면 1행
+    // 가시 컴포넌트들에만 yOffset 적용 (숨김은 어차피 렌더 안됨)
+    for (const c of comps) {
+      if (!isHidden(c)) yOffsetById.set(c.id, cumulativeSavings)
+    }
+
+    // row effective height 계산
+    const visibleNonCollapsed = comps.filter(c => !isHidden(c) && !collapsedIds.has(c.id))
+    let rowEffectiveH: number
+    if (visibleNonCollapsed.length > 0) {
+      rowEffectiveH = Math.max(...visibleNonCollapsed.map(c => c.grid_h ?? 6))
+    } else {
+      // 가시 + 접힘 안 된 컴포넌트가 0 → 접힘된 가시 컴포넌트 있으면 1, 모두 숨김이면 0
+      const visibleCollapsed = comps.filter(c => !isHidden(c) && collapsedIds.has(c.id))
+      rowEffectiveH = visibleCollapsed.length > 0 ? 1 : 0
+    }
+
     const rowOriginalH = Math.max(...comps.map(c => c.grid_h ?? 6))
     cumulativeSavings += Math.max(0, rowOriginalH - rowEffectiveH)
   }
 
-  // 그리드 전체 높이 — 압축 반영
+  // 그리드 전체 높이 — 압축 반영 (숨김 영역 제외, 접힘 1행으로 카운트)
   const gridRows = visibleComponents.length > 0
     ? Math.max(...visibleComponents.map(c => {
         const effY = (c.grid_y ?? 0) - (yOffsetById.get(c.id) ?? 0)
