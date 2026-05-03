@@ -25,6 +25,8 @@ interface CardItem {
 interface CardBannerConfig {
   heading?: string
   subtitle?: string
+  subtitle_align?: 'left' | 'center' | 'right'
+  subtitle_font_family?: string
   layout?: 'stack' | 'grid' | 'carousel'
   columns?: number
   gap?: number
@@ -59,6 +61,8 @@ export function TextCardBannerComponent({ config }: ComponentProps) {
   const gap = c.gap ?? 24
 
   const fontFamily = c.fontFamily || undefined
+  const subtitleFont = c.subtitle_font_family || undefined
+  const subtitleAlign: 'left' | 'center' | 'right' = c.subtitle_align ?? 'left'
   const pl = c.paddingLeft ?? 28
   const pr = c.paddingRight ?? 28
 
@@ -66,6 +70,7 @@ export function TextCardBannerComponent({ config }: ComponentProps) {
   const [carouselIdx, setCarouselIdx] = useState(0)
 
   useEffect(() => { if (fontFamily) loadFont(fontFamily) }, [fontFamily])
+  useEffect(() => { if (subtitleFont) loadFont(subtitleFont) }, [subtitleFont])
   useEffect(() => { setCarouselIdx(0) }, [cards.length])
 
   if (cards.length === 0) {
@@ -352,7 +357,15 @@ export function TextCardBannerComponent({ config }: ComponentProps) {
             </h1>
           )}
           {c.subtitle && (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+            <p style={{
+              fontSize: '13px',
+              color: 'var(--text-muted)',
+              margin: 0,
+              lineHeight: 1.5,
+              whiteSpace: 'pre-wrap',
+              textAlign: subtitleAlign,
+              fontFamily: subtitleFont || undefined,
+            }}>
               {c.subtitle}
             </p>
           )}
@@ -534,6 +547,54 @@ export function TextCardBannerConfigForm({ config, onChange }: ConfigFormProps) 
           onChange={e => set({ subtitle: e.target.value })}
           style={{ fontSize: '13px', resize: 'vertical', minHeight: '60px', fontFamily: 'inherit' }}
         />
+
+        {/* Subtitle 정렬 + 폰트 — Subtitle 이 입력되었을 때만 의미가 있으므로 항상 표시 */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          <div style={{ flex: '0 0 auto' }}>
+            <label style={{ ...labelStyle, fontSize: '10px' }}>정렬</label>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              {([
+                { v: 'left' as const, label: '◀', title: '왼쪽 정렬' },
+                { v: 'center' as const, label: '●', title: '가운데 정렬' },
+                { v: 'right' as const, label: '▶', title: '오른쪽 정렬' },
+              ]).map(opt => {
+                const active = (c.subtitle_align ?? 'left') === opt.v
+                return (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => set({ subtitle_align: opt.v })}
+                    title={opt.title}
+                    aria-label={opt.title}
+                    aria-pressed={active}
+                    style={{
+                      width: '32px', height: '32px',
+                      border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                      background: active ? 'var(--accent)' : 'var(--bg-primary)',
+                      color: active ? '#fff' : 'var(--text-muted)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0,
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <label style={{ ...labelStyle, fontSize: '10px' }}>글꼴</label>
+            <FontFamilySelect
+              value={c.subtitle_font_family || 'inherit'}
+              onChange={v => set({ subtitle_font_family: v === 'inherit' ? undefined : v })}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Layout */}
