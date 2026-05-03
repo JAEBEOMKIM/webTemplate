@@ -104,6 +104,8 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
   }, [sorted, nowMinutes])
 
   // 스크롤 기반 활성화 (rAF 디바운스)
+  // 부모(grid cell)가 콘텐츠 높이로 축소된 경우 컴포넌트 내부 스크롤이 발생하지 않으므로
+  // window 스크롤도 함께 처리한다.
   const scrollRaf = useRef(0)
   const handleScroll = useCallback(() => {
     if (scrollRaf.current) return
@@ -112,15 +114,40 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
       const container = containerRef.current
       if (!container || sorted.length === 0) return
 
-      const { scrollTop, scrollHeight, clientHeight } = container
-      const maxScroll = scrollHeight - clientHeight
-      const containerRect = container.getBoundingClientRect()
+      // 내부 스크롤 가능 여부 — 콘텐츠가 컨테이너보다 큰지로 판정
+      const hasInternalScroll = container.scrollHeight > container.clientHeight + 1
+      let centerY: number
 
-      // 포커스 포인트를 스크롤 위치에 따라 동적으로 이동
-      // 최상단(0%) → 컨테이너 상단(20%), 최하단(100%) → 컨테이너 하단(80%)
-      const scrollRatio = maxScroll > 0 ? scrollTop / maxScroll : 0
-      const focusRatio = 0.2 + scrollRatio * 0.6
-      const centerY = containerRect.top + containerRect.height * focusRatio
+      if (hasInternalScroll) {
+        // 내부 스크롤 모드 — 컨테이너 안에서 스크롤 비율에 따라 포커스 동적 이동
+        const { scrollTop, scrollHeight, clientHeight } = container
+        const maxScroll = scrollHeight - clientHeight
+        const containerRect = container.getBoundingClientRect()
+        const scrollRatio = maxScroll > 0 ? scrollTop / maxScroll : 0
+        const focusRatio = 0.2 + scrollRatio * 0.6  // 0.2 ~ 0.8
+        centerY = containerRect.top + containerRect.height * focusRatio
+      } else {
+        // 윈도우(페이지) 스크롤 모드 — 뷰포트와 컴포넌트의 교집합 기준 동적 포커스
+        const containerRect = container.getBoundingClientRect()
+        const viewTop = 0
+        const viewBottom = window.innerHeight
+        const visTop = Math.max(viewTop, containerRect.top)
+        const visBottom = Math.min(viewBottom, containerRect.bottom)
+
+        if (visBottom <= visTop) {
+          // 컴포넌트가 뷰포트 밖 — 포커스 변경 없음
+          return
+        }
+
+        // 컴포넌트가 위로 얼마나 올라갔는지 비율 (0=top 정렬, 1=bottom 정렬)
+        const totalScrollableHeight = containerRect.height - (visBottom - visTop)
+        const scrolledPast = visTop - containerRect.top
+        const scrollRatio = totalScrollableHeight > 0
+          ? Math.max(0, Math.min(1, scrolledPast / totalScrollableHeight))
+          : 0
+        const focusRatio = 0.2 + scrollRatio * 0.6
+        centerY = visTop + (visBottom - visTop) * focusRatio
+      }
 
       let closest = 0
       let minDist = Infinity
@@ -140,9 +167,13 @@ export function DailyScheduleComponent({ config }: ComponentProps) {
     const el = containerRef.current
     if (!el) return
     el.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', handleScroll, { passive: true })
     handleScroll()
     return () => {
       el.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
       if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current)
     }
   }, [handleScroll])
