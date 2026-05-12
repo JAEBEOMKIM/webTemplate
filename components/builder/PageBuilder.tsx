@@ -510,7 +510,7 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 120px)', minHeight: '600px', background: 'var(--bg-secondary)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 120px)', minHeight: '600px', background: '#f8fafc', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)' }}>
 
         {/* Left: Component Palette */}
         {paletteCollapsed ? (
@@ -518,21 +518,32 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
         ) : (<>
           <div style={{
             width: `${paletteWidth}px`, flexShrink: 0,
-            background: 'var(--bg-primary)',
+            background: '#ffffff',
             display: 'flex', flexDirection: 'column',
+            borderRight: '1px solid #e2e8f0',
           }}>
-            <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ padding: '18px 18px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>컴포넌트</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>드래그해서 추가</div>
+                <div style={{
+                  fontSize: '10px', fontWeight: 800, color: '#94a3b8',
+                  textTransform: 'uppercase', letterSpacing: '0.12em',
+                }}>Components</div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', fontWeight: 500 }}>드래그해서 추가</div>
               </div>
               <button
                 onClick={() => setPaletteCollapsed(true)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: '0 2px', lineHeight: 1 }}
+                style={{
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  color: '#94a3b8', fontSize: '14px', padding: '2px 6px',
+                  lineHeight: 1, borderRadius: '6px',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94a3b8' }}
                 title="패널 접기"
               >◀</button>
             </div>
-            <div style={{ padding: '8px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ padding: '4px 12px 12px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {groupTree.map(group => (
                 <PaletteGroup key={group.id} group={group} />
               ))}
@@ -542,35 +553,43 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
           <div
             onMouseDown={startResizePalette}
             style={{
-              width: '5px', flexShrink: 0, cursor: 'col-resize',
-              background: 'var(--border)', transition: 'background 0.1s',
+              width: '4px', flexShrink: 0, cursor: 'col-resize',
+              background: 'transparent', transition: 'background 0.15s',
+              marginLeft: '-4px', zIndex: 5, position: 'relative',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--accent)' }}
-            onMouseLeave={e => { if (!resizingPanel.current) (e.currentTarget as HTMLDivElement).style.background = 'var(--border)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#2563eb' }}
+            onMouseLeave={e => { if (!resizingPanel.current) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
             title="드래그하여 패널 크기 조절"
           />
         </>)}
 
         {/* Center: Grid Canvas */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {/* Header */}
+          {/* Header — Stitch design top bar style */}
           <div style={{
-            padding: '12px 16px', borderBottom: '1px solid var(--border)',
+            padding: '0 20px', borderBottom: '1px solid #e2e8f0',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            background: 'var(--bg-primary)', flexWrap: 'wrap', gap: '8px',
+            background: '#ffffff', flexWrap: 'wrap', gap: '12px',
+            height: '60px', minHeight: '60px',
           }}>
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{pageTitle}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>/{page.slug} · {COLS}열 × {MAX_ROWS}행</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>TemplateBuilder</div>
+              <div style={{ width: '1px', height: '22px', background: '#e2e8f0' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pageTitle}</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>/{page.slug} · {COLS}열 × {MAX_ROWS}행</div>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <button
                 onClick={() => setPreviewMode(p => !p)}
                 style={{
-                  padding: '5px 10px', fontSize: '12px', fontWeight: 600,
-                  background: previewMode ? 'var(--accent)' : 'var(--bg-secondary)',
-                  color: previewMode ? 'white' : 'var(--text-secondary)',
-                  border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer',
+                  padding: '7px 14px', fontSize: '12px', fontWeight: 600,
+                  background: previewMode ? '#2563eb' : '#ffffff',
+                  color: previewMode ? '#ffffff' : '#475569',
+                  border: previewMode ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                  borderRadius: '8px', cursor: 'pointer',
+                  transition: 'all 0.15s',
                 }}
                 title={previewMode ? '미리보기 끄기' : '미리보기 켜기'}
               >
@@ -580,9 +599,9 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                 value={devicePreset}
                 onChange={e => setDevicePreset(e.target.value)}
                 style={{
-                  padding: '5px 8px', fontSize: '11px', fontWeight: 600,
-                  background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
-                  border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer',
+                  padding: '7px 10px', fontSize: '11px', fontWeight: 600,
+                  background: '#ffffff', color: '#475569',
+                  border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer',
                 }}
               >
                 {DEVICE_PRESETS.map(d => (
@@ -591,23 +610,39 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                   </option>
                 ))}
               </select>
-              <span className={page.is_published ? 'badge-success' : 'badge-draft'}>
+              <span
+                style={{
+                  fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
+                  padding: '3px 8px', borderRadius: '999px',
+                  background: page.is_published ? 'rgba(16, 185, 129, 0.1)' : 'rgba(148, 163, 184, 0.12)',
+                  color: page.is_published ? '#059669' : '#64748b',
+                  border: page.is_published ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(148, 163, 184, 0.2)',
+                }}
+              >
                 {page.is_published ? '발행됨' : '초안'}
               </span>
               <button
                 onClick={handlePublishToggle}
                 disabled={saving}
-                className={page.is_published ? 'btn-secondary' : 'btn-primary'}
-                style={{ padding: '7px 16px', fontSize: '13px' }}
+                style={{
+                  padding: '8px 18px', fontSize: '13px', fontWeight: 600,
+                  background: page.is_published ? '#ffffff' : '#2563eb',
+                  color: page.is_published ? '#475569' : '#ffffff',
+                  border: page.is_published ? '1px solid #e2e8f0' : '1px solid #2563eb',
+                  borderRadius: '8px', cursor: saving ? 'not-allowed' : 'pointer',
+                  opacity: saving ? 0.6 : 1,
+                  transition: 'all 0.15s',
+                  boxShadow: page.is_published ? 'none' : '0 1px 2px rgba(37, 99, 235, 0.2)',
+                }}
               >
-                {saving ? '...' : page.is_published ? '발행 취소' : '발행하기'}
+                {saving ? '...' : page.is_published ? '발행 취소' : 'Publish'}
               </button>
             </div>
           </div>
 
-          {/* Grid area — useDroppable 캔버스 */}
+          {/* Grid area — useDroppable 캔버스 (Stitch design slate-50 background) */}
           <CanvasDropZone
-            style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px', background: 'var(--bg-secondary)', position: 'relative' }}
+            style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '20px', background: '#f1f5f9', position: 'relative' }}
           >
             <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
               {dropError && (
@@ -619,11 +654,15 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
               {components.length === 0 && !activePaletteType && (
                 <div style={{
                   position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                  textAlign: 'center', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 0,
+                  textAlign: 'center', color: '#94a3b8', pointerEvents: 'none', zIndex: 0,
+                  padding: '36px 48px',
+                  border: '2px dashed #cbd5e1',
+                  borderRadius: '12px',
+                  background: 'rgba(255, 255, 255, 0.5)',
                 }}>
-                  <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.3 }}>🧩</div>
-                  <p style={{ fontSize: '14px', fontWeight: 600 }}>왼쪽 패널에서 컴포넌트를</p>
-                  <p style={{ fontSize: '13px' }}>드래그해서 캔버스에 놓으세요</p>
+                  <div style={{ fontSize: '40px', marginBottom: '8px', opacity: 0.5 }}>🧩</div>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#475569', margin: '0 0 4px' }}>왼쪽 패널에서 컴포넌트를</p>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>드래그해서 캔버스에 놓으세요</p>
                 </div>
               )}
 
@@ -819,25 +858,44 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
           <div
             onMouseDown={startResizeConfig}
             style={{
-              width: '5px', flexShrink: 0, cursor: 'col-resize',
-              background: 'var(--border)', transition: 'background 0.1s',
+              width: '4px', flexShrink: 0, cursor: 'col-resize',
+              background: 'transparent', transition: 'background 0.15s',
+              marginRight: '-4px', zIndex: 5, position: 'relative',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--accent)' }}
-            onMouseLeave={e => { if (!resizingPanel.current) (e.currentTarget as HTMLDivElement).style.background = 'var(--border)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#2563eb' }}
+            onMouseLeave={e => { if (!resizingPanel.current) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
             title="드래그하여 패널 크기 조절"
           />
           <div style={{
             width: `${configWidth}px`, flexShrink: 0,
-            background: 'var(--bg-primary)',
+            background: '#ffffff',
             display: 'flex', flexDirection: 'column',
+            borderLeft: '1px solid #e2e8f0',
           }}>
-            <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {selectedDef ? `${selectedDef.icon} ${selectedDef.name} 설정` : '설정 패널'}
+            <div style={{ padding: '18px 20px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: '10px', fontWeight: 800, color: '#94a3b8',
+                  textTransform: 'uppercase', letterSpacing: '0.12em',
+                }}>Properties</div>
+                <div style={{
+                  fontSize: '13px', fontWeight: 700, color: '#0f172a',
+                  letterSpacing: '-0.01em', marginTop: '4px',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {selectedDef ? `${selectedDef.icon} ${selectedDef.name}` : 'Element Settings'}
+                </div>
               </div>
               <button
                 onClick={() => setConfigCollapsed(true)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: '0 2px', lineHeight: 1 }}
+                style={{
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  color: '#94a3b8', fontSize: '14px', padding: '2px 6px',
+                  lineHeight: 1, borderRadius: '6px',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94a3b8' }}
                 title="패널 접기"
               >▶</button>
             </div>
@@ -852,7 +910,7 @@ export function PageBuilder({ page, initialComponents, componentDefs, componentG
                   />
                   <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
                   <div>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>공통 옵션</div>
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.12em' }}>공통 옵션</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
