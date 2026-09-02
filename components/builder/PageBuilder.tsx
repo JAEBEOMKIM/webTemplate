@@ -27,7 +27,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   PointerSensor,
-  TouchSensor,
+  TouchSensor,  
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
